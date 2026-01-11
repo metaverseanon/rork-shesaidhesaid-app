@@ -5,8 +5,8 @@ import {
   View,
   TouchableOpacity,
   ActivityIndicator,
-  Platform,
   Modal,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -179,24 +179,7 @@ export default function HomeScreen() {
     }
   };
 
-  const takePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== "granted") {
-      alert(t('cameraPermissionDenied'));
-      return;
-    }
 
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      quality: 1,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      const uri = result.assets[0].uri;
-      setSelectedImage(uri);
-      analysisMutation.mutate(uri);
-    }
-  };
 
   return (
     <View style={styles.container}>
@@ -302,16 +285,6 @@ export default function HomeScreen() {
                     <Text style={styles.uploadButtonText}>{t('chooseFromGallery')}</Text>
                   </View>
                 </TouchableOpacity>
-
-                {Platform.OS !== "web" && (
-                  <TouchableOpacity
-                    style={styles.secondaryButton}
-                    onPress={takePhoto}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.secondaryButtonText}>{t('takePhoto')}</Text>
-                  </TouchableOpacity>
-                )}
               </View>
             )}
 
@@ -405,19 +378,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#ffffff",
   },
-  secondaryButton: {
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: "rgba(167, 139, 250, 0.3)",
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    alignItems: "center",
-  },
-  secondaryButtonText: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#a78bfa",
-  },
+
   analysisContainer: {
     flex: 1,
     justifyContent: "center",
