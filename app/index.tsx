@@ -13,7 +13,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { Upload, Trophy } from "lucide-react-native";
+import { Upload, Trophy, Globe } from "lucide-react-native";
 import { useMutation } from "@tanstack/react-query";
 import { generateObject } from "@rork-ai/toolkit-sdk";
 import { z } from "zod";
@@ -22,6 +22,7 @@ import * as Crypto from "expo-crypto";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { AnalysisResult } from "@/types/analysis";
 import { useScoreboard } from "@/contexts/ScoreboardContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const analysisSchema = z.object({
   winner: z.string().describe("The name of the person who won the argument"),
@@ -67,6 +68,7 @@ export default function HomeScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showConsentModal, setShowConsentModal] = useState(false);
   const { scores } = useScoreboard();
+  const { t, toggleLanguage, language } = useLanguage();
 
   useEffect(() => {
     checkConsent();
@@ -180,7 +182,7 @@ export default function HomeScreen() {
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") {
-      alert("Sorry, we need camera permissions to make this work!");
+      alert(t('cameraPermissionDenied'));
       return;
     }
 
@@ -205,24 +207,24 @@ export default function HomeScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Privacy Notice</Text>
+            <Text style={styles.modalTitle}>{t('privacyNotice')}</Text>
             <Text style={styles.modalText}>
-              By using this app, you acknowledge and consent to the following:
+              {t('privacyIntro')}
             </Text>
             <View style={styles.consentList}>
-              <Text style={styles.consentItem}>• The app will read and analyze text from images you upload</Text>
-              <Text style={styles.consentItem}>• Image content will be processed to provide argument analysis</Text>
-              <Text style={styles.consentItem}>• This is for entertainment purposes only</Text>
+              <Text style={styles.consentItem}>{t('consentItem1')}</Text>
+              <Text style={styles.consentItem}>{t('consentItem2')}</Text>
+              <Text style={styles.consentItem}>{t('consentItem3')}</Text>
             </View>
             <Text style={styles.modalFooter}>
-              Your images are processed securely and results are cached locally on your device.
+              {t('privacyFooter')}
             </Text>
             <TouchableOpacity
               style={styles.acceptButton}
               onPress={handleAcceptConsent}
               activeOpacity={0.8}
             >
-              <Text style={styles.acceptButtonText}>I Understand & Accept</Text>
+              <Text style={styles.acceptButtonText}>{t('iUnderstandAccept')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -233,6 +235,14 @@ export default function HomeScreen() {
       >
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.content}>
+            <TouchableOpacity
+              style={styles.languageToggle}
+              onPress={toggleLanguage}
+              activeOpacity={0.7}
+            >
+              <Globe color="#a78bfa" size={18} />
+              <Text style={styles.languageText}>{language === 'en' ? 'ES' : 'EN'}</Text>
+            </TouchableOpacity>
             <View style={styles.header}>
               <View style={styles.logoContainer}>
                 <Image
@@ -241,19 +251,19 @@ export default function HomeScreen() {
                   contentFit="contain"
                 />
               </View>
-              <Text style={styles.appSubtitle}>Argument Judge</Text>
+              <Text style={styles.appSubtitle}>{t('appSubtitle')}</Text>
               <Text style={styles.subtitle}>
-                Screenshots in. Judgment out.
+                {t('subtitle')}
               </Text>
               <Text style={styles.disclaimer}>
-                For entertainment purposes. Obviously.
+                {t('disclaimer')}
               </Text>
 
               {scores.length > 0 && (
                 <View style={styles.scoreboardCard}>
                   <View style={styles.scoreboardHeader}>
                     <Trophy color="#fbbf24" size={18} />
-                    <Text style={styles.scoreboardTitle}>SCOREBOARD</Text>
+                    <Text style={styles.scoreboardTitle}>{t('scoreboard')}</Text>
                   </View>
                   <View style={styles.scoresList}>
                     {scores.slice(0, 3).map((entry, index) => (
@@ -262,7 +272,7 @@ export default function HomeScreen() {
                           <Text style={styles.scoreRankText}>{index + 1}</Text>
                         </View>
                         <Text style={styles.scoreName}>{entry.name}</Text>
-                        <Text style={styles.scoreWins}>{entry.wins} {entry.wins === 1 ? 'win' : 'wins'}</Text>
+                        <Text style={styles.scoreWins}>{entry.wins} {entry.wins === 1 ? t('win') : t('wins')}</Text>
                       </View>
                     ))}
                   </View>
@@ -276,7 +286,7 @@ export default function HomeScreen() {
                   <Image source={{ uri: selectedImage }} style={styles.image} />
                   <View style={styles.loadingOverlay}>
                     <ActivityIndicator size="large" color="#a78bfa" />
-                    <Text style={styles.loadingText}>Analyzing argument...</Text>
+                    <Text style={styles.loadingText}>{t('analyzingArgument')}</Text>
                   </View>
                 </View>
               </View>
@@ -289,7 +299,7 @@ export default function HomeScreen() {
                 >
                   <View style={styles.uploadButtonGradient}>
                     <Upload color="#ffffff" size={28} strokeWidth={2} />
-                    <Text style={styles.uploadButtonText}>Choose from Gallery</Text>
+                    <Text style={styles.uploadButtonText}>{t('chooseFromGallery')}</Text>
                   </View>
                 </TouchableOpacity>
 
@@ -299,7 +309,7 @@ export default function HomeScreen() {
                     onPress={takePhoto}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.secondaryButtonText}>Take Photo</Text>
+                    <Text style={styles.secondaryButtonText}>{t('takePhoto')}</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -308,7 +318,7 @@ export default function HomeScreen() {
             {analysisMutation.isError && (
               <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>
-                  Failed to analyze. Please try again.
+                  {t('failedToAnalyze')}
                 </Text>
               </View>
             )}
@@ -571,5 +581,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600" as const,
     color: "#ffffff",
+  },
+  languageToggle: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    alignSelf: "flex-end" as const,
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    backgroundColor: "rgba(167, 139, 250, 0.15)",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(167, 139, 250, 0.3)",
+    marginTop: 8,
+  },
+  languageText: {
+    fontSize: 14,
+    fontWeight: "600" as const,
+    color: "#a78bfa",
   },
 });

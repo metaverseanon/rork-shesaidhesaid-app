@@ -28,6 +28,7 @@ import {
 import type { AnalysisResult } from "@/types/analysis";
 import { useEffect, useRef, useState } from "react";
 import { useScoreboard } from "@/contexts/ScoreboardContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function ResultsScreen() {
   const params = useLocalSearchParams<{ data: string; image: string }>();
@@ -36,6 +37,7 @@ export default function ResultsScreen() {
   const { addWin } = useScoreboard();
   const hasRecordedWin = useRef(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const { t } = useLanguage();
 
   const analysis: AnalysisResult | null = params.data
     ? JSON.parse(params.data)
@@ -67,16 +69,16 @@ export default function ResultsScreen() {
     const trophies = analysis.winner === analysis.faultPerson ? "😬" : "🏆";
     const loserEmoji = analysis.faultPerson === analysis.winner ? "" : "💀";
     
-    return `${trophies} ARGUMENT ANALYSIS RESULTS ${trophies}\n\n` +
-      `🎯 WINNER: ${analysis.winner}\n` +
-      `${loserEmoji} AT FAULT: ${analysis.faultPerson}\n\n` +
-      `📊 VERDICT:\n${analysis.winnerReason}\n\n` +
-      `🔥 Toxicity: ${analysis.toxicityLevel}% (${analysis.toxicityLabel})\n` +
-      `🎭 Pattern: ${analysis.argumentPattern}\n` +
-      `✅ Credibility: ${analysis.yourCredibility}%\n\n` +
-      `${analysis.redFlags.length > 0 ? `🚩 Red Flags: ${analysis.redFlags.join(", ")}\n\n` : ""}` +
-      `Judged by: Argument Judge 👨‍⚖️\n` +
-      `(For entertainment purposes. Obviously.)`;
+    return `${trophies} ${t('shareResults')} ${trophies}\n\n` +
+      `🎯 ${t('winner')}: ${analysis.winner}\n` +
+      `${loserEmoji} ${t('atFault')}: ${analysis.faultPerson}\n\n` +
+      `📊 ${t('verdict')}:\n${analysis.winnerReason}\n\n` +
+      `🔥 ${t('toxicity')}: ${analysis.toxicityLevel}% (${analysis.toxicityLabel})\n` +
+      `🎭 ${t('pattern')}: ${analysis.argumentPattern}\n` +
+      `✅ ${t('credibility')}: ${analysis.yourCredibility}%\n\n` +
+      `${analysis.redFlags.length > 0 ? `🚩 ${t('redFlags')}: ${analysis.redFlags.join(", ")}\n\n` : ""}` +
+      `${t('judgedBy')}\n` +
+      `${t('entertainmentPurposes')}`;
   };
 
   const handleShare = () => {
@@ -95,19 +97,19 @@ export default function ResultsScreen() {
         if (canOpen) {
           await Linking.openURL(whatsappUrl);
         } else {
-          Alert.alert("Error", "WhatsApp is not installed on this device");
+          Alert.alert(t('error'), t('whatsappNotInstalled'));
         }
       }
     } catch (error) {
       console.error("Error opening WhatsApp:", error);
-      Alert.alert("Error", "Failed to open WhatsApp. Please try again.");
+      Alert.alert(t('error'), t('failedToOpenWhatsApp'));
     }
   };
 
   if (!analysis) {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>No analysis data found</Text>
+        <Text style={styles.errorText}>{t('noAnalysisData')}</Text>
       </View>
     );
   }
@@ -127,7 +129,7 @@ export default function ResultsScreen() {
             >
               <ArrowLeft color="#a78bfa" size={24} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Analysis Complete</Text>
+            <Text style={styles.headerTitle}>{t('analysisComplete')}</Text>
             <View style={styles.backButton} />
           </View>
 
@@ -148,9 +150,9 @@ export default function ResultsScreen() {
               <View style={styles.verdictCard}>
                 <View style={styles.verdictHeader}>
                   <Gavel color="#a78bfa" size={20} />
-                  <Text style={styles.verdictLabel}>FINAL VERDICT</Text>
+                  <Text style={styles.verdictLabel}>{t('finalVerdict')}</Text>
                 </View>
-                <Text style={styles.winnerText}>{analysis.winner} Won 🎉</Text>
+                <Text style={styles.winnerText}>{analysis.winner} {t('won')}</Text>
                 <Text style={styles.winnerReason}>{analysis.winnerReason}</Text>
 
                 <View style={styles.scoresContainer}>
@@ -159,28 +161,28 @@ export default function ResultsScreen() {
                     <Text style={styles.scorePercentage}>
                       {analysis.yourCredibility}%
                     </Text>
-                    <Text style={styles.scoreLabel}>Credibility</Text>
+                    <Text style={styles.scoreLabel}>{t('credibility')}</Text>
                   </View>
 
                   <View style={styles.divider} />
 
                   <View style={styles.scoreCard}>
                     <XCircle color="#ef4444" size={24} />
-                    <Text style={styles.faultLabel}>Fault</Text>
+                    <Text style={styles.faultLabel}>{t('fault')}</Text>
                     <Text style={styles.faultName}>{analysis.faultPerson}</Text>
                   </View>
                 </View>
               </View>
 
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>KEY METRICS</Text>
+                <Text style={styles.sectionTitle}>{t('keyMetrics')}</Text>
 
                 <View style={styles.metricsGrid}>
                   <View style={styles.metricCard}>
                     <View style={styles.metricIcon}>
                       <Flame color="#f59e0b" size={24} />
                     </View>
-                    <Text style={styles.metricLabel}>Toxicity Level</Text>
+                    <Text style={styles.metricLabel}>{t('toxicityLevel')}</Text>
                     <Text style={styles.metricValue}>
                       {analysis.toxicityLevel}%{" "}
                       <Text style={styles.metricValueLabel}>
@@ -193,7 +195,7 @@ export default function ResultsScreen() {
                     <View style={styles.metricIcon}>
                       <Eye color="#8b5cf6" size={24} />
                     </View>
-                    <Text style={styles.metricLabel}>Argument Pattern</Text>
+                    <Text style={styles.metricLabel}>{t('argumentPattern')}</Text>
                     <Text style={styles.metricPattern}>
                       {analysis.argumentPattern}
                     </Text>
@@ -203,7 +205,7 @@ export default function ResultsScreen() {
 
               {analysis.redFlags.length > 0 && (
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>RED FLAGS DETECTED</Text>
+                  <Text style={styles.sectionTitle}>{t('redFlagsDetected')}</Text>
                   <View style={styles.redFlagsContainer}>
                     {analysis.redFlags.map((flag, index) => (
                       <View key={index} style={styles.redFlagPill}>
@@ -217,10 +219,10 @@ export default function ResultsScreen() {
 
               <View style={styles.section}>
                 <View style={styles.evidenceHeader}>
-                  <Text style={styles.sectionTitle}>EVIDENCE LOG</Text>
+                  <Text style={styles.sectionTitle}>{t('evidenceLog')}</Text>
                   <View style={styles.liveBadge}>
                     <Sparkles color="#8b5cf6" size={12} />
-                    <Text style={styles.liveBadgeText}>LIVE ANALYSIS</Text>
+                    <Text style={styles.liveBadgeText}>{t('liveAnalysis')}</Text>
                   </View>
                 </View>
 
@@ -241,7 +243,7 @@ export default function ResultsScreen() {
 
               {params.image && (
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>ORIGINAL SCREENSHOT</Text>
+                  <Text style={styles.sectionTitle}>{t('originalScreenshot')}</Text>
                   <View style={styles.imageContainer}>
                     <Image
                       source={{ uri: params.image }}
@@ -258,7 +260,7 @@ export default function ResultsScreen() {
                 activeOpacity={0.8}
               >
                 <Share2 color="#ffffff" size={20} />
-                <Text style={styles.shareButtonText}>Share Victory 🏆</Text>
+                <Text style={styles.shareButtonText}>{t('shareVictory')}</Text>
               </TouchableOpacity>
 
               <Modal
@@ -269,7 +271,7 @@ export default function ResultsScreen() {
               >
                 <View style={styles.shareModalOverlay}>
                   <View style={styles.shareModalContent}>
-                    <Text style={styles.shareModalTitle}>Victory Message Preview</Text>
+                    <Text style={styles.shareModalTitle}>{t('victoryMessagePreview')}</Text>
                     
                     <ScrollView style={styles.sharePreviewScroll} showsVerticalScrollIndicator={false}>
                       <View style={styles.sharePreviewCard}>
@@ -282,7 +284,7 @@ export default function ResultsScreen() {
                       onPress={handleWhatsAppShare}
                       activeOpacity={0.8}
                     >
-                      <Text style={styles.whatsappButtonText}>📱 Share via WhatsApp</Text>
+                      <Text style={styles.whatsappButtonText}>{t('shareViaWhatsApp')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -290,7 +292,7 @@ export default function ResultsScreen() {
                       onPress={() => setShowShareModal(false)}
                       activeOpacity={0.8}
                     >
-                      <Text style={styles.closeModalButtonText}>Close</Text>
+                      <Text style={styles.closeModalButtonText}>{t('close')}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -301,7 +303,7 @@ export default function ResultsScreen() {
                 onPress={() => router.back()}
                 activeOpacity={0.8}
               >
-                <Text style={styles.analyzeButtonText}>Analyze Another</Text>
+                <Text style={styles.analyzeButtonText}>{t('analyzeAnother')}</Text>
               </TouchableOpacity>
             </Animated.View>
           </ScrollView>
