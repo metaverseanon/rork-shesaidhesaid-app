@@ -317,17 +317,17 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 24,
     justifyContent: "space-between",
-    paddingBottom: 48,
+    paddingBottom: 38,
   },
   header: {
     alignItems: "center",
-    marginTop: 48,
-    marginBottom: 26,
+    marginTop: 38,
+    marginBottom: 21,
   },
   logoContainer: {
-    width: 336,
-    height: 336,
-    marginBottom: 19,
+    width: 269,
+    height: 269,
+    marginBottom: 15,
   },
   logo: {
     width: "100%",
