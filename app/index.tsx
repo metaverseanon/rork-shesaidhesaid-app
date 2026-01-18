@@ -370,7 +370,9 @@ const styles = StyleSheet.create({
   uploadButtonGradient: {
     paddingVertical: 20,
     paddingHorizontal: 32,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 12,
   },
   uploadButtonText: {
