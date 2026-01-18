@@ -321,13 +321,13 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: "center",
-    marginTop: 38,
+    marginTop: 10,
     marginBottom: 21,
   },
   logoContainer: {
     width: 269,
     height: 269,
-    marginBottom: 15,
+    marginBottom: 10,
   },
   logo: {
     width: "100%",
