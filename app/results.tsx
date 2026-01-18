@@ -39,9 +39,15 @@ export default function ResultsScreen() {
   const [showShareModal, setShowShareModal] = useState(false);
   const { t } = useLanguage();
 
-  const analysis: AnalysisResult | null = params.data
-    ? JSON.parse(params.data)
-    : null;
+  let analysis: AnalysisResult | null = null;
+  
+  try {
+    if (params.data) {
+      analysis = JSON.parse(params.data);
+    }
+  } catch (error) {
+    console.error("Failed to parse analysis data:", error);
+  }
 
   useEffect(() => {
     if (analysis && !hasRecordedWin.current) {

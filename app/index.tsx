@@ -122,8 +122,13 @@ export default function HomeScreen() {
       const cachedResult = await AsyncStorage.getItem(cacheKey);
 
       if (cachedResult) {
-        console.log("Returning cached analysis result");
-        return JSON.parse(cachedResult) as AnalysisResult;
+        try {
+          console.log("Returning cached analysis result");
+          return JSON.parse(cachedResult) as AnalysisResult;
+        } catch (parseError) {
+          console.log("Cached result is corrupted, clearing cache and reanalyzing", parseError);
+          await AsyncStorage.removeItem(cacheKey);
+        }
       }
 
       console.log("No cache found, analyzing image...");
