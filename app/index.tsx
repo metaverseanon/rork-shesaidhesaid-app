@@ -171,6 +171,7 @@ export default function HomeScreen() {
       mediaTypes: ["images"],
       allowsEditing: true,
       quality: 1,
+      aspect: [3, 4],
     });
 
     if (!result.canceled && result.assets[0]) {
@@ -319,15 +320,10 @@ export default function HomeScreen() {
               )}
             </View>
 
-            {analysisMutation.isPending && selectedImage ? (
-              <View style={styles.analysisContainer}>
-                <View style={styles.imagePreview}>
-                  <Image source={{ uri: selectedImage }} style={styles.image} />
-                  <View style={styles.loadingOverlay}>
-                    <ActivityIndicator size="large" color="#a78bfa" />
-                    <Text style={styles.loadingText}>{t('analyzingArgument')}</Text>
-                  </View>
-                </View>
+            {analysisMutation.isPending ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#a78bfa" />
+                <Text style={styles.loadingText}>{t('analyzingArgument')}</Text>
               </View>
             ) : (
               <View style={styles.uploadSection}>
@@ -437,27 +433,10 @@ const styles = StyleSheet.create({
     color: "#ffffff",
   },
 
-  analysisContainer: {
+  loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-  },
-  imagePreview: {
-    width: "100%",
-    aspectRatio: 0.75,
-    borderRadius: 20,
-    overflow: "hidden",
-    position: "relative",
-  },
-  image: {
-    width: "100%",
-    height: "100%",
-  },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    alignItems: "center",
-    justifyContent: "center",
     gap: 16,
   },
   loadingText: {
