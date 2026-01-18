@@ -16,7 +16,7 @@ export const [LanguageProvider, useLanguage] = createContextHook(() => {
   const loadLanguage = async () => {
     try {
       const savedLanguage = await AsyncStorage.getItem(LANGUAGE_KEY);
-      if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'es')) {
+      if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'es' || savedLanguage === 'de')) {
         setLanguageState(savedLanguage);
       }
     } catch (error) {
@@ -41,8 +41,10 @@ export const [LanguageProvider, useLanguage] = createContextHook(() => {
   }, [language]);
 
   const toggleLanguage = useCallback(() => {
-    const newLang = language === 'en' ? 'es' : 'en';
-    setLanguage(newLang);
+    const langs: Language[] = ['en', 'es', 'de'];
+    const currentIndex = langs.indexOf(language);
+    const nextIndex = (currentIndex + 1) % langs.length;
+    setLanguage(langs[nextIndex]);
   }, [language, setLanguage]);
 
   return {

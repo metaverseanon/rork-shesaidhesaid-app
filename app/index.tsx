@@ -67,8 +67,9 @@ const analysisSchema = z.object({
 export default function HomeScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showConsentModal, setShowConsentModal] = useState(false);
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
   const { scores } = useScoreboard();
-  const { t, toggleLanguage, language } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
 
   useEffect(() => {
     checkConsent();
@@ -220,12 +221,67 @@ export default function HomeScreen() {
           <View style={styles.content}>
             <TouchableOpacity
               style={styles.languageToggle}
-              onPress={toggleLanguage}
+              onPress={() => setShowLanguageModal(true)}
               activeOpacity={0.7}
             >
-              <Globe color="#a78bfa" size={18} />
-              <Text style={styles.languageText}>{language === 'en' ? 'ES' : 'EN'}</Text>
+              <Globe color="#a78bfa" size={20} />
             </TouchableOpacity>
+
+            <Modal
+              visible={showLanguageModal}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setShowLanguageModal(false)}
+            >
+              <TouchableOpacity 
+                style={styles.languageModalOverlay}
+                activeOpacity={1}
+                onPress={() => setShowLanguageModal(false)}
+              >
+                <View style={styles.languageModalContent}>
+                  <Text style={styles.languageModalTitle}>{t('language')}</Text>
+                  
+                  <TouchableOpacity
+                    style={[styles.languageOption, language === 'en' && styles.languageOptionActive]}
+                    onPress={() => {
+                      setLanguage('en');
+                      setShowLanguageModal(false);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.languageOptionText, language === 'en' && styles.languageOptionTextActive]}>
+                      {t('english')}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.languageOption, language === 'es' && styles.languageOptionActive]}
+                    onPress={() => {
+                      setLanguage('es');
+                      setShowLanguageModal(false);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.languageOptionText, language === 'es' && styles.languageOptionTextActive]}>
+                      {t('spanish')}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.languageOption, language === 'de' && styles.languageOptionActive]}
+                    onPress={() => {
+                      setLanguage('de');
+                      setShowLanguageModal(false);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.languageOptionText, language === 'de' && styles.languageOptionTextActive]}>
+                      {t('german')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            </Modal>
             <View style={styles.header}>
               <View style={styles.logoContainer}>
                 <Image
@@ -546,21 +602,63 @@ const styles = StyleSheet.create({
     color: "#ffffff",
   },
   languageToggle: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
     alignSelf: "flex-end" as const,
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    padding: 10,
     backgroundColor: "rgba(167, 139, 250, 0.15)",
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "rgba(167, 139, 250, 0.3)",
     marginTop: 8,
   },
-  languageText: {
-    fontSize: 14,
+  languageModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+    paddingHorizontal: 24,
+  },
+  languageModalContent: {
+    backgroundColor: "#1a0f2e",
+    borderRadius: 20,
+    padding: 24,
+    width: "100%",
+    maxWidth: 300,
+    borderWidth: 1.5,
+    borderColor: "rgba(167, 139, 250, 0.3)",
+    shadowColor: "#a78bfa",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  languageModalTitle: {
+    fontSize: 20,
+    fontWeight: "700" as const,
+    color: "#ffffff",
+    marginBottom: 20,
+    textAlign: "center" as const,
+  },
+  languageOption: {
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginBottom: 10,
+    backgroundColor: "rgba(167, 139, 250, 0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(167, 139, 250, 0.2)",
+  },
+  languageOptionActive: {
+    backgroundColor: "rgba(167, 139, 250, 0.25)",
+    borderColor: "#a78bfa",
+  },
+  languageOptionText: {
+    fontSize: 16,
+    fontWeight: "500" as const,
+    color: "rgba(255, 255, 255, 0.7)",
+    textAlign: "center" as const,
+  },
+  languageOptionTextActive: {
+    color: "#ffffff",
     fontWeight: "600" as const,
-    color: "#a78bfa",
   },
 });
