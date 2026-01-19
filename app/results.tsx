@@ -476,8 +476,6 @@ const styles = StyleSheet.create({
     color: "#ffffff",
   },
   redFlagsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
     gap: 10,
   },
   redFlagPill: {
@@ -492,6 +490,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   redFlagText: {
+    flex: 1,
     fontSize: 13,
     fontWeight: "500",
     color: "#ef4444",
