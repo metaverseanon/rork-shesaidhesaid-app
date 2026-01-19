@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Modal,
   Platform,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -23,6 +24,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { AnalysisResult } from "@/types/analysis";
 import { useScoreboard } from "@/contexts/ScoreboardContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+
+const validationSchema = z.object({
+  isValidChat: z.boolean().describe("Whether the image is a screenshot of a conversation/chat between people"),
+  reason: z.string().describe("Brief explanation of why this is or isn't a chat screenshot"),
+});
 
 const analysisSchema = z.object({
   winner: z.string().describe("The name of the person who won the argument"),
@@ -112,6 +118,32 @@ export default function HomeScreen() {
 
       console.log("Image converted to base64");
 
+      console.log("Validating if image is a chat screenshot...");
+      const validation = await generateObject({
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "image",
+                image: base64Image,
+              },
+              {
+                type: "text",
+                text: "Is this image a screenshot of a text conversation or chat between people? It should contain messages exchanged between at least two people. Return true only if it's clearly a conversation/chat screenshot (from messaging apps, text messages, social media DMs, etc.).",
+              },
+            ],
+          },
+        ],
+        schema: validationSchema,
+      });
+
+      console.log("Validation result:", validation);
+
+      if (!validation.isValidChat) {
+        throw new Error(`NOT_A_CHAT: ${validation.reason}`);
+      }
+
       const imageHash = await Crypto.digestStringAsync(
         Crypto.CryptoDigestAlgorithm.SHA256,
         base64Image
@@ -168,6 +200,23 @@ export default function HomeScreen() {
     },
     onError: (error) => {
       console.error("Analysis error:", error);
+      
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      if (errorMessage.startsWith("NOT_A_CHAT:")) {
+        const reason = errorMessage.replace("NOT_A_CHAT: ", "");
+        Alert.alert(
+          t('invalidImage'),
+          `${t('pleaseUploadChat')}\n\n${reason}`,
+          [{ text: "OK" }]
+        );
+      } else {
+        Alert.alert(
+          t('error'),
+          t('failedToAnalyze'),
+          [{ text: "OK" }]
+        );
+      }
     },
   });
 

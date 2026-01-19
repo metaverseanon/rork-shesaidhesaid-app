@@ -54,6 +54,8 @@ export const translations = {
     english: 'English',
     spanish: 'Español',
     german: 'Deutsch',
+    invalidImage: 'Invalid Image',
+    pleaseUploadChat: 'Please upload a screenshot of a text conversation or chat between people.',
   },
   es: {
     appSubtitle: 'Juez de Argumentos',
@@ -108,6 +110,8 @@ export const translations = {
     english: 'English',
     spanish: 'Español',
     german: 'Deutsch',
+    invalidImage: 'Imagen Inválida',
+    pleaseUploadChat: 'Por favor, sube una captura de pantalla de una conversación de texto entre personas.',
   },
   de: {
     appSubtitle: 'Argument-Richter',
@@ -162,6 +166,8 @@ export const translations = {
     english: 'English',
     spanish: 'Español',
     german: 'Deutsch',
+    invalidImage: 'Ungültiges Bild',
+    pleaseUploadChat: 'Bitte laden Sie einen Screenshot eines Textgesprächs zwischen Personen hoch.',
   },
 };
 
