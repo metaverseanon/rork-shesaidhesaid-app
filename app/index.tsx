@@ -8,13 +8,14 @@ import {
   Modal,
   Platform,
   Alert,
+  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { Upload, Trophy, Globe, Medal } from "lucide-react-native";
+import { Upload, Trophy, Globe, Medal, Pencil } from "lucide-react-native";
 import { useMutation } from "@tanstack/react-query";
 import { generateObject } from "@rork-ai/toolkit-sdk";
 import { z } from "zod";
@@ -74,8 +75,11 @@ export default function HomeScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
-  const { scores } = useScoreboard();
+  const { scores, renamePerson } = useScoreboard();
   const { t, language, setLanguage } = useLanguage();
+  const [editNameModal, setEditNameModal] = useState(false);
+  const [editingName, setEditingName] = useState("");
+  const [newNameInput, setNewNameInput] = useState("");
 
   useEffect(() => {
     checkConsent();
@@ -364,7 +368,12 @@ export default function HomeScreen() {
                     <View style={styles.scoreboardDivider} />
                     <View style={styles.vsContainer}>
                       <View style={styles.playerSide}>
-                        <Text style={styles.player1Name} numberOfLines={1}>{player1.name}</Text>
+                        <TouchableOpacity onPress={() => { setEditingName(player1.name); setNewNameInput(player1.name); setEditNameModal(true); }} activeOpacity={0.7}>
+                          <View style={styles.editableNameRow}>
+                            <Text style={styles.player1Name} numberOfLines={1}>{player1.name}</Text>
+                            <Pencil color="#ff69b4" size={12} />
+                          </View>
+                        </TouchableOpacity>
                         <Text style={styles.player1Score}>{player1.wins}</Text>
                         <Text style={styles.player1WinsLabel}>{t('wins').toUpperCase()}</Text>
                       </View>
@@ -372,7 +381,12 @@ export default function HomeScreen() {
                         <>
                           <Text style={styles.vsText}>VS</Text>
                           <View style={styles.playerSide}>
-                            <Text style={styles.player2Name} numberOfLines={1}>{player2.name}</Text>
+                            <TouchableOpacity onPress={() => { setEditingName(player2.name); setNewNameInput(player2.name); setEditNameModal(true); }} activeOpacity={0.7}>
+                              <View style={styles.editableNameRow}>
+                                <Text style={styles.player2Name} numberOfLines={1}>{player2.name}</Text>
+                                <Pencil color="#fbbf24" size={12} />
+                              </View>
+                            </TouchableOpacity>
                             <Text style={styles.player2Score}>{player2.wins}</Text>
                             <Text style={styles.player2WinsLabel}>{t('wins').toUpperCase()}</Text>
                           </View>
@@ -409,7 +423,12 @@ export default function HomeScreen() {
                                   <Text style={styles.otherPlayerRankText}>#{rank}</Text>
                                 )}
                               </View>
-                              <Text style={styles.otherPlayerName} numberOfLines={1}>{player.name}</Text>
+                              <TouchableOpacity onPress={() => { setEditingName(player.name); setNewNameInput(player.name); setEditNameModal(true); }} activeOpacity={0.7} style={{ flex: 1 }}>
+                                <View style={styles.editableNameRow}>
+                                  <Text style={styles.otherPlayerName} numberOfLines={1}>{player.name}</Text>
+                                  <Pencil color="rgba(255,255,255,0.35)" size={10} />
+                                </View>
+                              </TouchableOpacity>
                               <View style={styles.otherPlayerWinsBadge}>
                                 <Text style={styles.otherPlayerWinsText}>{player.wins}</Text>
                               </View>
@@ -421,6 +440,49 @@ export default function HomeScreen() {
                   </View>
                 );
               })()}
+
+              <Modal
+                visible={editNameModal}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setEditNameModal(false)}
+              >
+                <View style={styles.editNameModalOverlay}>
+                  <View style={styles.editNameModalContent}>
+                    <Text style={styles.editNameModalTitle}>{t('editName')}</Text>
+                    <TextInput
+                      style={styles.editNameInput}
+                      value={newNameInput}
+                      onChangeText={setNewNameInput}
+                      placeholder={t('enterNewName')}
+                      placeholderTextColor="rgba(255,255,255,0.3)"
+                      autoFocus
+                      maxLength={30}
+                      selectTextOnFocus
+                    />
+                    <TouchableOpacity
+                      style={[styles.editNameSaveButton, !newNameInput.trim() && { opacity: 0.4 }]}
+                      onPress={() => {
+                        if (newNameInput.trim()) {
+                          renamePerson(editingName, newNameInput.trim());
+                          setEditNameModal(false);
+                        }
+                      }}
+                      activeOpacity={0.8}
+                      disabled={!newNameInput.trim()}
+                    >
+                      <Text style={styles.editNameSaveText}>{t('save')}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.editNameCancelButton}
+                      onPress={() => setEditNameModal(false)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.editNameCancelText}>{t('cancel')}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </Modal>
             </View>
 
             {analysisMutation.isPending ? (
@@ -701,6 +763,70 @@ const styles = StyleSheet.create({
   otherPlayerWinsText: {
     fontSize: 13,
     fontWeight: "700" as const,
+    color: "#a78bfa",
+  },
+  editableNameRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 5,
+  },
+  editNameModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.85)",
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+    paddingHorizontal: 24,
+  },
+  editNameModalContent: {
+    backgroundColor: "#1a0f2e",
+    borderRadius: 20,
+    padding: 24,
+    width: "100%" as const,
+    maxWidth: 340,
+    borderWidth: 1.5,
+    borderColor: "rgba(167, 139, 250, 0.3)",
+  },
+  editNameModalTitle: {
+    fontSize: 20,
+    fontWeight: "700" as const,
+    color: "#ffffff",
+    marginBottom: 20,
+    textAlign: "center" as const,
+  },
+  editNameInput: {
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: "#ffffff",
+    borderWidth: 1,
+    borderColor: "rgba(167, 139, 250, 0.3)",
+    marginBottom: 20,
+  },
+  editNameSaveButton: {
+    backgroundColor: "#7c3aed",
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center" as const,
+    marginBottom: 10,
+  },
+  editNameSaveText: {
+    fontSize: 16,
+    fontWeight: "600" as const,
+    color: "#ffffff",
+  },
+  editNameCancelButton: {
+    backgroundColor: "rgba(167, 139, 250, 0.15)",
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center" as const,
+    borderWidth: 1,
+    borderColor: "rgba(167, 139, 250, 0.25)",
+  },
+  editNameCancelText: {
+    fontSize: 15,
+    fontWeight: "600" as const,
     color: "#a78bfa",
   },
   modalOverlay: {

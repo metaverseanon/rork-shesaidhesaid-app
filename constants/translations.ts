@@ -57,6 +57,11 @@ export const translations = {
     invalidImage: 'Invalid Image',
     pleaseUploadChat: 'Please upload a screenshot of a text conversation or chat between people.',
     alsoCompeting: 'ALSO COMPETING',
+    editName: 'Edit Name',
+    enterNewName: 'Enter a new name',
+    save: 'Save',
+    cancel: 'Cancel',
+    tapToEdit: 'Tap name to edit',
   },
   es: {
     appSubtitle: 'Juez de Argumentos',
@@ -114,6 +119,11 @@ export const translations = {
     invalidImage: 'Imagen Inválida',
     pleaseUploadChat: 'Por favor, sube una captura de pantalla de una conversación de texto entre personas.',
     alsoCompeting: 'TAMBIÉN COMPITIENDO',
+    editName: 'Editar Nombre',
+    enterNewName: 'Ingresa un nuevo nombre',
+    save: 'Guardar',
+    cancel: 'Cancelar',
+    tapToEdit: 'Toca el nombre para editar',
   },
   de: {
     appSubtitle: 'Argument-Richter',
@@ -171,6 +181,11 @@ export const translations = {
     invalidImage: 'Ungültiges Bild',
     pleaseUploadChat: 'Bitte laden Sie einen Screenshot eines Textgesprächs zwischen Personen hoch.',
     alsoCompeting: 'EBENFALLS IM WETTBEWERB',
+    editName: 'Name bearbeiten',
+    enterNewName: 'Neuen Namen eingeben',
+    save: 'Speichern',
+    cancel: 'Abbrechen',
+    tapToEdit: 'Name antippen zum Bearbeiten',
   },
 };
 

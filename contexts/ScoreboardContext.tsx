@@ -66,5 +66,43 @@ export const [ScoreboardProvider, useScoreboard] = createContextHook(() => {
     }
   };
 
-  return { scores, addWin, clearScoreboard, isLoading };
+  const renamePerson = async (oldName: string, newName: string) => {
+    try {
+      const trimmed = newName.trim();
+      if (!trimmed) return;
+
+      const existingEntry = scores.find(
+        (entry) => entry.name.toLowerCase() === trimmed.toLowerCase() && entry.name.toLowerCase() !== oldName.toLowerCase()
+      );
+
+      let updatedScores: ScoreEntry[];
+
+      if (existingEntry) {
+        updatedScores = scores
+          .map((entry) => {
+            if (entry.name.toLowerCase() === trimmed.toLowerCase()) {
+              const oldEntry = scores.find((e) => e.name.toLowerCase() === oldName.toLowerCase());
+              return { ...entry, wins: entry.wins + (oldEntry?.wins ?? 0) };
+            }
+            return entry;
+          })
+          .filter((entry) => entry.name.toLowerCase() !== oldName.toLowerCase());
+      } else {
+        updatedScores = scores.map((entry) =>
+          entry.name.toLowerCase() === oldName.toLowerCase()
+            ? { ...entry, name: trimmed }
+            : entry
+        );
+      }
+
+      updatedScores.sort((a, b) => b.wins - a.wins);
+      setScores(updatedScores);
+      await AsyncStorage.setItem(SCOREBOARD_KEY, JSON.stringify(updatedScores));
+      console.log(`Renamed "${oldName}" to "${trimmed}"`);
+    } catch (error) {
+      console.error("Failed to rename person:", error);
+    }
+  };
+
+  return { scores, addWin, clearScoreboard, renamePerson, isLoading };
 });
