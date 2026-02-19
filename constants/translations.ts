@@ -56,6 +56,7 @@ export const translations = {
     german: 'Deutsch',
     invalidImage: 'Invalid Image',
     pleaseUploadChat: 'Please upload a screenshot of a text conversation or chat between people.',
+    alsoCompeting: 'ALSO COMPETING',
   },
   es: {
     appSubtitle: 'Juez de Argumentos',
@@ -112,6 +113,7 @@ export const translations = {
     german: 'Deutsch',
     invalidImage: 'Imagen Inválida',
     pleaseUploadChat: 'Por favor, sube una captura de pantalla de una conversación de texto entre personas.',
+    alsoCompeting: 'TAMBIÉN COMPITIENDO',
   },
   de: {
     appSubtitle: 'Argument-Richter',
@@ -168,6 +170,7 @@ export const translations = {
     german: 'Deutsch',
     invalidImage: 'Ungültiges Bild',
     pleaseUploadChat: 'Bitte laden Sie einen Screenshot eines Textgesprächs zwischen Personen hoch.',
+    alsoCompeting: 'EBENFALLS IM WETTBEWERB',
   },
 };
 

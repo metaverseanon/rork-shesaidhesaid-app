@@ -14,7 +14,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { Upload, Trophy, Globe } from "lucide-react-native";
+import { Upload, Trophy, Globe, Medal } from "lucide-react-native";
 import { useMutation } from "@tanstack/react-query";
 import { generateObject } from "@rork-ai/toolkit-sdk";
 import { z } from "zod";
@@ -392,6 +392,32 @@ export default function HomeScreen() {
                       <View style={[styles.progressBarFill, { flex: player1Ratio }]} />
                       <View style={[styles.progressBarRight, { flex: 1 - player1Ratio }]} />
                     </View>
+
+                    {scores.length > 2 && (
+                      <View style={styles.otherPlayersSection}>
+                        <View style={styles.otherPlayersDivider} />
+                        <Text style={styles.otherPlayersLabel}>{t('alsoCompeting')}</Text>
+                        {scores.slice(2).map((player, index) => {
+                          const rank = index + 3;
+                          const medalColor = rank === 3 ? '#cd7f32' : 'rgba(255,255,255,0.35)';
+                          return (
+                            <View key={player.name} style={styles.otherPlayerRow}>
+                              <View style={styles.otherPlayerRank}>
+                                {rank === 3 ? (
+                                  <Medal color={medalColor} size={16} />
+                                ) : (
+                                  <Text style={styles.otherPlayerRankText}>#{rank}</Text>
+                                )}
+                              </View>
+                              <Text style={styles.otherPlayerName} numberOfLines={1}>{player.name}</Text>
+                              <View style={styles.otherPlayerWinsBadge}>
+                                <Text style={styles.otherPlayerWinsText}>{player.wins}</Text>
+                              </View>
+                            </View>
+                          );
+                        })}
+                      </View>
+                    )}
                   </View>
                 );
               })()}
@@ -622,6 +648,60 @@ const styles = StyleSheet.create({
   progressBarRight: {
     backgroundColor: "#5bc0eb",
     borderRadius: 7,
+  },
+  otherPlayersSection: {
+    marginTop: 18,
+  },
+  otherPlayersDivider: {
+    height: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    marginBottom: 12,
+  },
+  otherPlayersLabel: {
+    fontSize: 10,
+    fontWeight: "700" as const,
+    color: "rgba(255, 255, 255, 0.35)",
+    letterSpacing: 1.5,
+    marginBottom: 10,
+  },
+  otherPlayerRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 10,
+    marginBottom: 4,
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+  },
+  otherPlayerRank: {
+    width: 28,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  otherPlayerRankText: {
+    fontSize: 12,
+    fontWeight: "600" as const,
+    color: "rgba(255, 255, 255, 0.35)",
+  },
+  otherPlayerName: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "600" as const,
+    color: "rgba(255, 255, 255, 0.75)",
+    marginLeft: 6,
+  },
+  otherPlayerWinsBadge: {
+    backgroundColor: "rgba(124, 58, 237, 0.25)",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    minWidth: 32,
+    alignItems: "center" as const,
+  },
+  otherPlayerWinsText: {
+    fontSize: 13,
+    fontWeight: "700" as const,
+    color: "#a78bfa",
   },
   modalOverlay: {
     flex: 1,
