@@ -175,7 +175,7 @@ export default function HomeScreen() {
               },
               {
                 type: "text",
-                text: "Analyze this argument/conversation screenshot. Determine who won the argument based on logical consistency, emotional stability, and communication effectiveness. Identify red flags, toxicity levels, and argument patterns. Be humorous but fair in your analysis. Extract the names from the conversation if visible.",
+                text: "Analyze this argument/conversation screenshot. Determine who won the argument based on logical consistency, emotional stability, and communication effectiveness. Identify red flags, toxicity levels, and argument patterns. Be humorous but fair in your analysis.\n\nIMPORTANT for naming the people:\n- The person whose messages appear on the RIGHT side (typically colored/blue/green bubbles) should be called \"You\"\n- The person whose messages appear on the LEFT side (typically grey/white bubbles) is the other person\n- If you can see a contact name or profile name at the top of the chat, use that for the other person\n- If no name is visible, give the other person a funny descriptive nickname based on their personality in the conversation (e.g. \"Drama Queen\", \"Captain Excuses\", \"The Deflector\", \"Mr. Always Right\", etc.)\n- Use these names consistently for winner, faultPerson, and all references",
               },
             ],
           },
@@ -381,7 +381,7 @@ export default function HomeScreen() {
                         <>
                           <Text style={styles.vsText}>VS</Text>
                           <View style={styles.playerSide}>
-                            <Text style={styles.player2Name} numberOfLines={1}>???</Text>
+                            <Text style={styles.player2Name} numberOfLines={1}>Next Challenger</Text>
                             <Text style={styles.player2Score}>0</Text>
                             <Text style={styles.player2WinsLabel}>{t('wins').toUpperCase()}</Text>
                           </View>
