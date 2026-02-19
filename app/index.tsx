@@ -657,6 +657,7 @@ const styles = StyleSheet.create({
     fontWeight: "700" as const,
     color: "#ff69b4",
     marginBottom: 4,
+    flexShrink: 1,
   },
   player1Score: {
     fontSize: 52,
@@ -676,6 +677,7 @@ const styles = StyleSheet.create({
     fontWeight: "700" as const,
     color: "#fbbf24",
     marginBottom: 4,
+    flexShrink: 1,
   },
   player2Score: {
     fontSize: 52,
@@ -746,7 +748,7 @@ const styles = StyleSheet.create({
     color: "rgba(255, 255, 255, 0.35)",
   },
   otherPlayerName: {
-    flex: 1,
+    flexShrink: 1,
     fontSize: 14,
     fontWeight: "600" as const,
     color: "rgba(255, 255, 255, 0.75)",
@@ -769,6 +771,7 @@ const styles = StyleSheet.create({
     flexDirection: "row" as const,
     alignItems: "center" as const,
     gap: 5,
+    maxWidth: "100%",
   },
   editNameModalOverlay: {
     flex: 1,
