@@ -353,11 +353,11 @@ export default function HomeScreen() {
                 {t('disclaimer')}
               </Text>
 
-              {scores.length >= 2 && (() => {
+              {scores.length >= 1 && (() => {
                 const player1 = scores[0];
-                const player2 = scores[1];
-                const total = player1.wins + player2.wins;
-                const player1Ratio = total > 0 ? player1.wins / total : 0.5;
+                const player2 = scores.length >= 2 ? scores[1] : null;
+                const total = player1.wins + (player2?.wins ?? 0);
+                const player1Ratio = player2 ? (total > 0 ? player1.wins / total : 0.5) : 1;
                 return (
                   <View style={styles.scoreboardCard}>
                     <Text style={styles.scoreboardLabel}>{t('scoreboard')}</Text>
@@ -368,12 +368,25 @@ export default function HomeScreen() {
                         <Text style={styles.player1Score}>{player1.wins}</Text>
                         <Text style={styles.player1WinsLabel}>{t('wins').toUpperCase()}</Text>
                       </View>
-                      <Text style={styles.vsText}>VS</Text>
-                      <View style={styles.playerSide}>
-                        <Text style={styles.player2Name} numberOfLines={1}>{player2.name}</Text>
-                        <Text style={styles.player2Score}>{player2.wins}</Text>
-                        <Text style={styles.player2WinsLabel}>{t('wins').toUpperCase()}</Text>
-                      </View>
+                      {player2 ? (
+                        <>
+                          <Text style={styles.vsText}>VS</Text>
+                          <View style={styles.playerSide}>
+                            <Text style={styles.player2Name} numberOfLines={1}>{player2.name}</Text>
+                            <Text style={styles.player2Score}>{player2.wins}</Text>
+                            <Text style={styles.player2WinsLabel}>{t('wins').toUpperCase()}</Text>
+                          </View>
+                        </>
+                      ) : (
+                        <>
+                          <Text style={styles.vsText}>VS</Text>
+                          <View style={styles.playerSide}>
+                            <Text style={styles.player2Name} numberOfLines={1}>???</Text>
+                            <Text style={styles.player2Score}>0</Text>
+                            <Text style={styles.player2WinsLabel}>{t('wins').toUpperCase()}</Text>
+                          </View>
+                        </>
+                      )}
                     </View>
                     <View style={styles.progressBarTrack}>
                       <View style={[styles.progressBarFill, { flex: player1Ratio }]} />
