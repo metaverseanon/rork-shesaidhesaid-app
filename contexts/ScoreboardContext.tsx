@@ -8,10 +8,12 @@ export interface ScoreEntry {
 }
 
 const SCOREBOARD_KEY = "scoreboard_data";
+const COLOR_PREF_KEY = "color_preference";
 
 export const [ScoreboardProvider, useScoreboard] = createContextHook(() => {
   const [scores, setScores] = useState<ScoreEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [colorSwapped, setColorSwapped] = useState(false);
 
   useEffect(() => {
     loadScores();
@@ -22,6 +24,10 @@ export const [ScoreboardProvider, useScoreboard] = createContextHook(() => {
       const stored = await AsyncStorage.getItem(SCOREBOARD_KEY);
       if (stored) {
         setScores(JSON.parse(stored));
+      }
+      const colorPref = await AsyncStorage.getItem(COLOR_PREF_KEY);
+      if (colorPref === "swapped") {
+        setColorSwapped(true);
       }
     } catch (error) {
       console.error("Failed to load scoreboard:", error);
@@ -120,5 +126,19 @@ export const [ScoreboardProvider, useScoreboard] = createContextHook(() => {
     }
   };
 
-  return { scores, addWin, clearScoreboard, renamePerson, addPerson, isLoading };
+  const toggleColors = async () => {
+    try {
+      const newVal = !colorSwapped;
+      setColorSwapped(newVal);
+      await AsyncStorage.setItem(COLOR_PREF_KEY, newVal ? "swapped" : "default");
+      console.log(`Color preference: ${newVal ? "blue/pink" : "pink/blue"}`);
+    } catch (error) {
+      console.error("Failed to save color preference:", error);
+    }
+  };
+
+  const player1Color = colorSwapped ? "#5bc0eb" : "#ff69b4";
+  const player2Color = colorSwapped ? "#ff69b4" : "#5bc0eb";
+
+  return { scores, addWin, clearScoreboard, renamePerson, addPerson, isLoading, colorSwapped, toggleColors, player1Color, player2Color };
 });

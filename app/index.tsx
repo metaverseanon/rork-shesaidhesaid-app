@@ -15,7 +15,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { Upload, Trophy, Globe, Medal, Pencil } from "lucide-react-native";
+import { Upload, Trophy, Globe, Medal, Pencil, ArrowLeftRight } from "lucide-react-native";
 import { useMutation } from "@tanstack/react-query";
 import { generateObject } from "@rork-ai/toolkit-sdk";
 import { z } from "zod";
@@ -75,7 +75,7 @@ export default function HomeScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
-  const { scores, renamePerson, addPerson } = useScoreboard();
+  const { scores, renamePerson, addPerson, player1Color, player2Color, toggleColors } = useScoreboard();
   const { t, language, setLanguage } = useLanguage();
   const [editNameModal, setEditNameModal] = useState(false);
   const [editingName, setEditingName] = useState("");
@@ -364,18 +364,25 @@ export default function HomeScreen() {
                 const player1Ratio = player2 ? (total > 0 ? player1.wins / total : 0.5) : 1;
                 return (
                   <View style={styles.scoreboardCard}>
-                    <Text style={styles.scoreboardLabel}>{t('scoreboard')}</Text>
+                    <View style={styles.scoreboardHeaderRow}>
+                      <Text style={styles.scoreboardLabel}>{t('scoreboard')}</Text>
+                      <TouchableOpacity onPress={toggleColors} activeOpacity={0.7} style={styles.colorSwapButton}>
+                        <ArrowLeftRight color="rgba(255,255,255,0.5)" size={14} />
+                        <View style={[styles.colorDot, { backgroundColor: player1Color }]} />
+                        <View style={[styles.colorDot, { backgroundColor: player2Color }]} />
+                      </TouchableOpacity>
+                    </View>
                     <View style={styles.scoreboardDivider} />
                     <View style={styles.vsContainer}>
                       <View style={styles.playerSide}>
                         <TouchableOpacity onPress={() => { setEditingName(player1.name); setNewNameInput(player1.name); setEditNameModal(true); }} activeOpacity={0.7}>
                           <View style={styles.editableNameRow}>
-                            <Text style={styles.player1Name} numberOfLines={1}>{player1.name}</Text>
-                            <Pencil color="#ff69b4" size={12} />
+                            <Text style={[styles.player1Name, { color: player1Color }]} numberOfLines={1}>{player1.name}</Text>
+                            <Pencil color={player1Color} size={12} />
                           </View>
                         </TouchableOpacity>
-                        <Text style={styles.player1Score}>{player1.wins}</Text>
-                        <Text style={styles.player1WinsLabel}>{t('wins').toUpperCase()}</Text>
+                        <Text style={[styles.player1Score, { color: player1Color }]}>{player1.wins}</Text>
+                        <Text style={[styles.player1WinsLabel, { color: player1Color }]}>{t('wins').toUpperCase()}</Text>
                       </View>
                       {player2 ? (
                         <>
@@ -383,12 +390,12 @@ export default function HomeScreen() {
                           <View style={styles.playerSide}>
                             <TouchableOpacity onPress={() => { setEditingName(player2.name); setNewNameInput(player2.name); setEditNameModal(true); }} activeOpacity={0.7}>
                               <View style={styles.editableNameRow}>
-                                <Text style={styles.player2Name} numberOfLines={1}>{player2.name}</Text>
-                                <Pencil color="#fbbf24" size={12} />
+                                <Text style={[styles.player2Name, { color: player2Color }]} numberOfLines={1}>{player2.name}</Text>
+                                <Pencil color={player2Color} size={12} />
                               </View>
                             </TouchableOpacity>
-                            <Text style={styles.player2Score}>{player2.wins}</Text>
-                            <Text style={styles.player2WinsLabel}>{t('wins').toUpperCase()}</Text>
+                            <Text style={[styles.player2Score, { color: player2Color }]}>{player2.wins}</Text>
+                            <Text style={[styles.player2WinsLabel, { color: player2Color }]}>{t('wins').toUpperCase()}</Text>
                           </View>
                         </>
                       ) : (
@@ -397,19 +404,19 @@ export default function HomeScreen() {
                           <View style={styles.playerSide}>
                             <TouchableOpacity onPress={() => { setEditingName('__next_challenger__'); setNewNameInput(''); setEditNameModal(true); }} activeOpacity={0.7}>
                               <View style={styles.editableNameRow}>
-                                <Text style={styles.nextChallengerName} numberOfLines={1}>Next Challenger</Text>
-                                <Pencil color="#5bc0eb" size={12} />
+                                <Text style={[styles.nextChallengerName, { color: player2Color }]} numberOfLines={1}>Opponent</Text>
+                                <Pencil color={player2Color} size={12} />
                               </View>
                             </TouchableOpacity>
-                            <Text style={styles.player2Score}>0</Text>
-                            <Text style={styles.player2WinsLabel}>{t('wins').toUpperCase()}</Text>
+                            <Text style={[styles.player2Score, { color: player2Color }]}>0</Text>
+                            <Text style={[styles.player2WinsLabel, { color: player2Color }]}>{t('wins').toUpperCase()}</Text>
                           </View>
                         </>
                       )}
                     </View>
-                    <View style={styles.progressBarTrack}>
-                      <View style={[styles.progressBarFill, { flex: player1Ratio }]} />
-                      <View style={[styles.progressBarRight, { flex: 1 - player1Ratio }]} />
+                    <View style={[styles.progressBarTrack, { backgroundColor: `${player2Color}4D` }]}>
+                      <View style={[styles.progressBarFill, { flex: player1Ratio, backgroundColor: player1Color }]} />
+                      <View style={[styles.progressBarRight, { flex: 1 - player1Ratio, backgroundColor: player2Color }]} />
                     </View>
 
                     {scores.length > 2 && (
@@ -639,12 +646,31 @@ const styles = StyleSheet.create({
     padding: 20,
     width: "100%",
   },
+  scoreboardHeaderRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    marginBottom: 10,
+  },
   scoreboardLabel: {
     fontSize: 11,
     fontWeight: "700" as const,
-    color: "rgba(255, 255, 255, 0.45)",
+    color: "#fbbf24",
     letterSpacing: 2,
-    marginBottom: 10,
+  },
+  colorSwapButton: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 5,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  colorDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   scoreboardDivider: {
     height: 1,
@@ -684,7 +710,7 @@ const styles = StyleSheet.create({
   player2Name: {
     fontSize: 16,
     fontWeight: "700" as const,
-    color: "#fbbf24",
+    color: "#5bc0eb",
     marginBottom: 4,
     flexShrink: 1,
   },
