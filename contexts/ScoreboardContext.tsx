@@ -104,5 +104,21 @@ export const [ScoreboardProvider, useScoreboard] = createContextHook(() => {
     }
   };
 
-  return { scores, addWin, clearScoreboard, renamePerson, isLoading };
+  const addPerson = async (name: string) => {
+    try {
+      const trimmed = name.trim();
+      if (!trimmed) return;
+      const exists = scores.find((e) => e.name.toLowerCase() === trimmed.toLowerCase());
+      if (exists) return;
+      const updatedScores = [...scores, { name: trimmed, wins: 0 }];
+      updatedScores.sort((a, b) => b.wins - a.wins);
+      setScores(updatedScores);
+      await AsyncStorage.setItem(SCOREBOARD_KEY, JSON.stringify(updatedScores));
+      console.log(`Added person "${trimmed}"`);
+    } catch (error) {
+      console.error("Failed to add person:", error);
+    }
+  };
+
+  return { scores, addWin, clearScoreboard, renamePerson, addPerson, isLoading };
 });

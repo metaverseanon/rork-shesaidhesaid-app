@@ -75,7 +75,7 @@ export default function HomeScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
-  const { scores, renamePerson } = useScoreboard();
+  const { scores, renamePerson, addPerson } = useScoreboard();
   const { t, language, setLanguage } = useLanguage();
   const [editNameModal, setEditNameModal] = useState(false);
   const [editingName, setEditingName] = useState("");
@@ -395,7 +395,12 @@ export default function HomeScreen() {
                         <>
                           <Text style={styles.vsText}>VS</Text>
                           <View style={styles.playerSide}>
-                            <Text style={styles.nextChallengerName} numberOfLines={1}>Next Challenger</Text>
+                            <TouchableOpacity onPress={() => { setEditingName('__next_challenger__'); setNewNameInput(''); setEditNameModal(true); }} activeOpacity={0.7}>
+                              <View style={styles.editableNameRow}>
+                                <Text style={styles.nextChallengerName} numberOfLines={1}>Next Challenger</Text>
+                                <Pencil color="#5bc0eb" size={12} />
+                              </View>
+                            </TouchableOpacity>
                             <Text style={styles.player2Score}>0</Text>
                             <Text style={styles.player2WinsLabel}>{t('wins').toUpperCase()}</Text>
                           </View>
@@ -464,7 +469,11 @@ export default function HomeScreen() {
                       style={[styles.editNameSaveButton, !newNameInput.trim() && { opacity: 0.4 }]}
                       onPress={() => {
                         if (newNameInput.trim()) {
-                          renamePerson(editingName, newNameInput.trim());
+                          if (editingName === '__next_challenger__') {
+                            addPerson(newNameInput.trim());
+                          } else {
+                            renamePerson(editingName, newNameInput.trim());
+                          }
                           setEditNameModal(false);
                         }
                       }}
