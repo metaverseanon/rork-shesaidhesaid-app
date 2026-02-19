@@ -191,7 +191,7 @@ export default function HomeScreen() {
     },
     onSuccess: (data) => {
       router.push({
-        pathname: "/results",
+        pathname: "/results" as any,
         params: {
           data: JSON.stringify(data),
           image: selectedImage,
