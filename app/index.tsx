@@ -395,7 +395,7 @@ export default function HomeScreen() {
                         <>
                           <Text style={styles.vsText}>VS</Text>
                           <View style={styles.playerSide}>
-                            <Text style={styles.player2Name} numberOfLines={1}>Next Challenger</Text>
+                            <Text style={styles.nextChallengerName} numberOfLines={1}>Next Challenger</Text>
                             <Text style={styles.player2Score}>0</Text>
                             <Text style={styles.player2WinsLabel}>{t('wins').toUpperCase()}</Text>
                           </View>
@@ -676,6 +676,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700" as const,
     color: "#fbbf24",
+    marginBottom: 4,
+    flexShrink: 1,
+  },
+  nextChallengerName: {
+    fontSize: 16,
+    fontWeight: "700" as const,
+    color: "#5bc0eb",
     marginBottom: 4,
     flexShrink: 1,
   },
