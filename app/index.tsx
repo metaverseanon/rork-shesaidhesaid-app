@@ -353,25 +353,35 @@ export default function HomeScreen() {
                 {t('disclaimer')}
               </Text>
 
-              {scores.length > 0 && (
-                <View style={styles.scoreboardCard}>
-                  <View style={styles.scoreboardHeader}>
-                    <Trophy color="#fbbf24" size={18} />
-                    <Text style={styles.scoreboardTitle}>{t('scoreboard')}</Text>
-                  </View>
-                  <View style={styles.scoresList}>
-                    {scores.slice(0, 3).map((entry, index) => (
-                      <View key={index} style={styles.scoreRow}>
-                        <View style={styles.scoreRank}>
-                          <Text style={styles.scoreRankText}>{index + 1}</Text>
-                        </View>
-                        <Text style={styles.scoreName}>{entry.name}</Text>
-                        <Text style={styles.scoreWins}>{entry.wins} {entry.wins === 1 ? t('win') : t('wins')}</Text>
+              {scores.length >= 2 && (() => {
+                const player1 = scores[0];
+                const player2 = scores[1];
+                const total = player1.wins + player2.wins;
+                const player1Ratio = total > 0 ? player1.wins / total : 0.5;
+                return (
+                  <View style={styles.scoreboardCard}>
+                    <Text style={styles.scoreboardLabel}>{t('scoreboard')}</Text>
+                    <View style={styles.scoreboardDivider} />
+                    <View style={styles.vsContainer}>
+                      <View style={styles.playerSide}>
+                        <Text style={styles.player1Name} numberOfLines={1}>{player1.name}</Text>
+                        <Text style={styles.player1Score}>{player1.wins}</Text>
+                        <Text style={styles.player1WinsLabel}>{t('wins').toUpperCase()}</Text>
                       </View>
-                    ))}
+                      <Text style={styles.vsText}>VS</Text>
+                      <View style={styles.playerSide}>
+                        <Text style={styles.player2Name} numberOfLines={1}>{player2.name}</Text>
+                        <Text style={styles.player2Score}>{player2.wins}</Text>
+                        <Text style={styles.player2WinsLabel}>{t('wins').toUpperCase()}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.progressBarTrack}>
+                      <View style={[styles.progressBarFill, { flex: player1Ratio }]} />
+                      <View style={[styles.progressBarRight, { flex: 1 - player1Ratio }]} />
+                    </View>
                   </View>
-                </View>
-              )}
+                );
+              })()}
             </View>
 
             {analysisMutation.isPending ? (
@@ -512,64 +522,93 @@ const styles = StyleSheet.create({
   },
   scoreboardCard: {
     marginTop: 26,
-    backgroundColor: "rgba(30, 20, 60, 0.6)",
-    borderRadius: 20,
+    backgroundColor: "rgba(20, 14, 40, 0.85)",
+    borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: "rgba(251, 191, 36, 0.4)",
+    borderColor: "rgba(251, 191, 36, 0.45)",
     padding: 20,
     width: "100%",
-    shadowColor: "#fbbf24",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 5,
   },
-  scoreboardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(251, 191, 36, 0.2)",
+  scoreboardLabel: {
+    fontSize: 11,
+    fontWeight: "700" as const,
+    color: "rgba(255, 255, 255, 0.45)",
+    letterSpacing: 2,
+    marginBottom: 10,
   },
-  scoreboardTitle: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#fbbf24",
-    letterSpacing: 1.2,
+  scoreboardDivider: {
+    height: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    marginBottom: 20,
   },
-  scoresList: {
-    gap: 12,
+  vsContainer: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    marginBottom: 22,
   },
-  scoreRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  scoreRank: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "rgba(251, 191, 36, 0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  scoreRankText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#fbbf24",
-  },
-  scoreName: {
+  playerSide: {
     flex: 1,
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#ffffff",
+    alignItems: "center" as const,
   },
-  scoreWins: {
-    fontSize: 14,
-    fontWeight: "500" as const,
-    color: "rgba(255, 255, 255, 0.6)",
+  player1Name: {
+    fontSize: 16,
+    fontWeight: "700" as const,
+    color: "#ff69b4",
+    marginBottom: 4,
+  },
+  player1Score: {
+    fontSize: 52,
+    fontWeight: "800" as const,
+    color: "#ff69b4",
+    lineHeight: 58,
+  },
+  player1WinsLabel: {
+    fontSize: 13,
+    fontWeight: "700" as const,
+    color: "#ff69b4",
+    letterSpacing: 1.5,
+    marginTop: 2,
+  },
+  player2Name: {
+    fontSize: 16,
+    fontWeight: "700" as const,
+    color: "#fbbf24",
+    marginBottom: 4,
+  },
+  player2Score: {
+    fontSize: 52,
+    fontWeight: "800" as const,
+    color: "#5bc0eb",
+    lineHeight: 58,
+  },
+  player2WinsLabel: {
+    fontSize: 13,
+    fontWeight: "700" as const,
+    color: "#5bc0eb",
+    letterSpacing: 1.5,
+    marginTop: 2,
+  },
+  vsText: {
+    fontSize: 22,
+    fontWeight: "800" as const,
+    color: "#7c3aed",
+    marginHorizontal: 12,
+  },
+  progressBarTrack: {
+    flexDirection: "row" as const,
+    height: 14,
+    borderRadius: 7,
+    overflow: "hidden" as const,
+    backgroundColor: "rgba(91, 192, 235, 0.3)",
+  },
+  progressBarFill: {
+    backgroundColor: "#ff69b4",
+    borderRadius: 7,
+  },
+  progressBarRight: {
+    backgroundColor: "#5bc0eb",
+    borderRadius: 7,
   },
   modalOverlay: {
     flex: 1,
