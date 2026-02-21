@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
   TextInput,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -277,6 +278,7 @@ export default function HomeScreen() {
         style={styles.gradient}
       >
         <SafeAreaView style={styles.safeArea}>
+          <ScrollView contentContainerStyle={styles.contentScroll} bounces={false} showsVerticalScrollIndicator={false}>
           <View style={styles.content}>
             <TouchableOpacity
               style={styles.languageToggle}
@@ -529,6 +531,7 @@ export default function HomeScreen() {
               </View>
             )}
           </View>
+          </ScrollView>
         </SafeAreaView>
       </LinearGradient>
     </View>
@@ -545,6 +548,10 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+  },
+  contentScroll: {
+    flexGrow: 1,
+    justifyContent: "space-between",
   },
   content: {
     flex: 1,
