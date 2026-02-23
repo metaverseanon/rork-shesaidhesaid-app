@@ -16,7 +16,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { Upload, Trophy, Globe, Medal, Pencil, ArrowLeftRight } from "lucide-react-native";
+import { Upload, Trophy, Globe, Medal, Pencil, ArrowLeftRight, Trash2 } from "lucide-react-native";
 import { useMutation } from "@tanstack/react-query";
 import { generateObject } from "@rork-ai/toolkit-sdk";
 import { z } from "zod";
@@ -76,7 +76,7 @@ export default function HomeScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
-  const { scores, renamePerson, addPerson, player1Color, player2Color, toggleColors } = useScoreboard();
+  const { scores, renamePerson, addPerson, clearScoreboard, player1Color, player2Color, toggleColors } = useScoreboard();
   const { t, language, setLanguage } = useLanguage();
   const [editNameModal, setEditNameModal] = useState(false);
   const [editingName, setEditingName] = useState("");
@@ -278,7 +278,7 @@ export default function HomeScreen() {
         style={styles.gradient}
       >
         <SafeAreaView style={styles.safeArea}>
-          <ScrollView contentContainerStyle={styles.contentScroll} bounces={false} showsVerticalScrollIndicator={false}>
+          <ScrollView contentContainerStyle={styles.contentScroll} bounces={true} showsVerticalScrollIndicator={false}>
           <View style={styles.content}>
             <TouchableOpacity
               style={styles.languageToggle}
@@ -451,6 +451,24 @@ export default function HomeScreen() {
                         })}
                       </View>
                     )}
+
+                    <TouchableOpacity
+                      style={styles.clearScoreboardButton}
+                      onPress={() => {
+                        Alert.alert(
+                          t('clearScoreboard'),
+                          t('clearScoreboardConfirm'),
+                          [
+                            { text: t('cancel'), style: 'cancel' },
+                            { text: t('clear'), style: 'destructive', onPress: clearScoreboard },
+                          ]
+                        );
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Trash2 color="rgba(239, 68, 68, 0.7)" size={13} />
+                      <Text style={styles.clearScoreboardText}>{t('clearScoreboard')}</Text>
+                    </TouchableOpacity>
                   </View>
                 );
               })()}
@@ -552,22 +570,22 @@ const styles = StyleSheet.create({
   contentScroll: {
     flexGrow: 1,
     justifyContent: "space-between",
+    paddingBottom: 24,
   },
   content: {
     flex: 1,
     paddingHorizontal: 24,
     justifyContent: "space-between",
-    paddingBottom: 38,
   },
   header: {
     alignItems: "center",
     marginTop: 10,
-    marginBottom: 21,
+    marginBottom: 16,
   },
   logoContainer: {
-    width: 269,
-    height: 269,
-    marginBottom: 10,
+    width: 180,
+    height: 180,
+    marginBottom: 8,
   },
   logo: {
     width: "100%",
@@ -645,7 +663,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   scoreboardCard: {
-    marginTop: 26,
+    marginTop: 18,
     backgroundColor: "rgba(20, 14, 40, 0.85)",
     borderRadius: 16,
     borderWidth: 1.5,
@@ -682,13 +700,13 @@ const styles = StyleSheet.create({
   scoreboardDivider: {
     height: 1,
     backgroundColor: "rgba(255, 255, 255, 0.15)",
-    marginBottom: 20,
+    marginBottom: 14,
   },
   vsContainer: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
     justifyContent: "space-between" as const,
-    marginBottom: 22,
+    marginBottom: 16,
   },
   playerSide: {
     flex: 1,
@@ -702,10 +720,10 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   player1Score: {
-    fontSize: 52,
+    fontSize: 44,
     fontWeight: "800" as const,
     color: "#ff69b4",
-    lineHeight: 58,
+    lineHeight: 50,
   },
   player1WinsLabel: {
     fontSize: 13,
@@ -729,10 +747,10 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   player2Score: {
-    fontSize: 52,
+    fontSize: 44,
     fontWeight: "800" as const,
     color: "#5bc0eb",
-    lineHeight: 58,
+    lineHeight: 50,
   },
   player2WinsLabel: {
     fontSize: 13,
@@ -815,6 +833,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700" as const,
     color: "#a78bfa",
+  },
+  clearScoreboardButton: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: 6,
+    marginTop: 14,
+    paddingVertical: 8,
+  },
+  clearScoreboardText: {
+    fontSize: 12,
+    fontWeight: "600" as const,
+    color: "rgba(239, 68, 68, 0.7)",
   },
   editableNameRow: {
     flexDirection: "row" as const,

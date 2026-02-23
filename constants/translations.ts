@@ -62,6 +62,9 @@ export const translations = {
     save: 'Save',
     cancel: 'Cancel',
     tapToEdit: 'Tap name to edit',
+    clearScoreboard: 'Clear Scoreboard',
+    clearScoreboardConfirm: 'Are you sure you want to clear the entire scoreboard? This cannot be undone.',
+    clear: 'Clear',
   },
   es: {
     appSubtitle: 'Juez de Argumentos',
@@ -124,6 +127,9 @@ export const translations = {
     save: 'Guardar',
     cancel: 'Cancelar',
     tapToEdit: 'Toca el nombre para editar',
+    clearScoreboard: 'Borrar Marcador',
+    clearScoreboardConfirm: '¿Estás seguro de que quieres borrar todo el marcador? Esto no se puede deshacer.',
+    clear: 'Borrar',
   },
   de: {
     appSubtitle: 'Argument-Richter',
@@ -186,6 +192,9 @@ export const translations = {
     save: 'Speichern',
     cancel: 'Abbrechen',
     tapToEdit: 'Name antippen zum Bearbeiten',
+    clearScoreboard: 'Punktetafel löschen',
+    clearScoreboardConfirm: 'Sind Sie sicher, dass Sie die gesamte Punktetafel löschen möchten? Dies kann nicht rückgängig gemacht werden.',
+    clear: 'Löschen',
   },
 };
 
