@@ -31,7 +31,7 @@ import { useScoreboard } from "@/contexts/ScoreboardContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function ResultsScreen() {
-  const params = useLocalSearchParams<{ data: string; image: string }>();
+  const params = useLocalSearchParams<{ data: string; images: string }>();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const { addWin } = useScoreboard();
@@ -247,18 +247,31 @@ export default function ResultsScreen() {
                 </View>
               </View>
 
-              {params.image && (
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>{t('originalScreenshot')}</Text>
-                  <View style={styles.imageContainer}>
-                    <Image
-                      source={{ uri: params.image }}
-                      style={styles.screenshotImage}
-                      contentFit="contain"
-                    />
+              {params.images && (() => {
+                let imageList: string[] = [];
+                try {
+                  imageList = JSON.parse(params.images);
+                } catch (e) {
+                  console.log('Failed to parse images param', e);
+                }
+                if (imageList.length === 0) return null;
+                return (
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>
+                      {t('originalScreenshot')}{imageList.length > 1 ? ` (${imageList.length})` : ''}
+                    </Text>
+                    {imageList.map((uri, idx) => (
+                      <View key={idx} style={styles.imageContainer}>
+                        <Image
+                          source={{ uri }}
+                          style={styles.screenshotImage}
+                          contentFit="contain"
+                        />
+                      </View>
+                    ))}
                   </View>
-                </View>
-              )}
+                );
+              })()}
 
               <TouchableOpacity
                 style={styles.shareButton}

@@ -73,7 +73,7 @@ const analysisSchema = z.object({
 });
 
 export default function HomeScreen() {
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const { scores, renamePerson, addPerson, clearScoreboard, player1Color, player2Color, toggleColors } = useScoreboard();
@@ -99,31 +99,34 @@ export default function HomeScreen() {
   };
 
   const analysisMutation = useMutation({
-    mutationFn: async (imageUri: string) => {
-      console.log("Starting analysis for image:", imageUri);
+    mutationFn: async (imageUris: string[]) => {
+      console.log("Starting analysis for images:", imageUris.length);
 
-      let base64Image: string;
-
-      if (Platform.OS === "web") {
-        const response = await fetch(imageUri);
-        const blob = await response.blob();
-        base64Image = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const base64 = (reader.result as string).split(",")[1];
-            resolve(base64);
-          };
-          reader.readAsDataURL(blob);
-        });
-      } else {
-        base64Image = await FileSystem.readAsStringAsync(imageUri, {
-          encoding: "base64",
-        });
+      const base64Images: string[] = [];
+      for (const imageUri of imageUris) {
+        let base64Image: string;
+        if (Platform.OS === "web") {
+          const response = await fetch(imageUri);
+          const blob = await response.blob();
+          base64Image = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const base64 = (reader.result as string).split(",")[1];
+              resolve(base64);
+            };
+            reader.readAsDataURL(blob);
+          });
+        } else {
+          base64Image = await FileSystem.readAsStringAsync(imageUri, {
+            encoding: "base64",
+          });
+        }
+        base64Images.push(base64Image);
       }
 
-      console.log("Image converted to base64");
+      console.log("All images converted to base64");
 
-      console.log("Validating if image is a chat screenshot...");
+      console.log("Validating if first image is a chat screenshot...");
       const validation = await generateObject({
         messages: [
           {
@@ -131,7 +134,7 @@ export default function HomeScreen() {
             content: [
               {
                 type: "image",
-                image: base64Image,
+                image: base64Images[0],
               },
               {
                 type: "text",
@@ -149,13 +152,13 @@ export default function HomeScreen() {
         throw new Error(`NOT_A_CHAT: ${validation.reason}`);
       }
 
-      const imageHash = await Crypto.digestStringAsync(
+      const combinedHash = await Crypto.digestStringAsync(
         Crypto.CryptoDigestAlgorithm.SHA256,
-        base64Image
+        base64Images.join("_")
       );
-      console.log("Image hash:", imageHash);
+      console.log("Combined image hash:", combinedHash);
 
-      const cacheKey = `analysis_${imageHash}`;
+      const cacheKey = `analysis_${combinedHash}`;
       const cachedResult = await AsyncStorage.getItem(cacheKey);
 
       if (cachedResult) {
@@ -168,19 +171,25 @@ export default function HomeScreen() {
         }
       }
 
-      console.log("No cache found, analyzing image...");
+      const imageContentParts = base64Images.map((b64) => ({
+        type: "image" as const,
+        image: b64,
+      }));
+
+      const multiImageNote = base64Images.length > 1
+        ? `\n\nIMPORTANT: These ${base64Images.length} images are parts of the SAME conversation, in order. Analyze them together as one continuous conversation.`
+        : "";
+
+      console.log("No cache found, analyzing images...");
       const result = await generateObject({
         messages: [
           {
             role: "user",
             content: [
-              {
-                type: "image",
-                image: base64Image,
-              },
+              ...imageContentParts,
               {
                 type: "text",
-                text: "Analyze this argument/conversation screenshot. Determine who won the argument based on logical consistency, emotional stability, and communication effectiveness. Identify red flags, toxicity levels, and argument patterns. Be humorous but fair in your analysis.\n\nIMPORTANT for naming the people:\n- The person whose messages appear on the RIGHT side (typically colored/blue/green bubbles) should be called \"You\"\n- The person whose messages appear on the LEFT side (typically grey/white bubbles) is the other person\n- If you can see a contact name or profile name at the top of the chat, use that for the other person\n- If no name is visible, give the other person a funny descriptive nickname based on their personality in the conversation (e.g. \"Drama Queen\", \"Captain Excuses\", \"The Deflector\", \"Mr. Always Right\", etc.)\n- Use these names consistently for winner, faultPerson, and all references",
+                text: `Analyze this argument/conversation screenshot. Determine who won the argument based on logical consistency, emotional stability, and communication effectiveness. Identify red flags, toxicity levels, and argument patterns. Be humorous but fair in your analysis.\n\nIMPORTANT for naming the people:\n- The person whose messages appear on the RIGHT side (typically colored/blue/green bubbles) should be called \"You\"\n- The person whose messages appear on the LEFT side (typically grey/white bubbles) is the other person\n- If you can see a contact name or profile name at the top of the chat, use that for the other person\n- If no name is visible, give the other person a funny descriptive nickname based on their personality in the conversation (e.g. \"Drama Queen\", \"Captain Excuses\", \"The Deflector\", \"Mr. Always Right\", etc.)\n- Use these names consistently for winner, faultPerson, and all references${multiImageNote}`,
               },
             ],
           },
@@ -199,7 +208,7 @@ export default function HomeScreen() {
         pathname: "/results" as any,
         params: {
           data: JSON.stringify(data),
-          image: selectedImage,
+          images: JSON.stringify(selectedImages),
         },
       });
     },
@@ -228,15 +237,17 @@ export default function HomeScreen() {
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
-      allowsEditing: true,
+      allowsMultipleSelection: true,
       quality: 1,
-      aspect: [3, 4],
+      orderedSelection: true,
+      selectionLimit: 10,
     });
 
-    if (!result.canceled && result.assets[0]) {
-      const uri = result.assets[0].uri;
-      setSelectedImage(uri);
-      analysisMutation.mutate(uri);
+    if (!result.canceled && result.assets.length > 0) {
+      const uris = result.assets.map((asset) => asset.uri);
+      console.log("Selected images:", uris.length);
+      setSelectedImages(uris);
+      analysisMutation.mutate(uris);
     }
   };
 
