@@ -235,10 +235,12 @@ export default function HomeScreen() {
   });
 
   const pickImage = async () => {
+    console.log("Opening image picker - multiple selection, no cropping");
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
+      allowsEditing: false,
       allowsMultipleSelection: true,
-      quality: 1,
+      quality: 0.9,
       orderedSelection: true,
       selectionLimit: 10,
     });
