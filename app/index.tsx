@@ -84,6 +84,9 @@ export default function HomeScreen() {
 
   useEffect(() => {
     checkConsent();
+    ImagePicker.requestMediaLibraryPermissionsAsync().then((result) => {
+      console.log("Media library permission pre-requested:", result.status);
+    });
   }, []);
 
   const checkConsent = async () => {
