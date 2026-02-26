@@ -22,6 +22,7 @@ import { generateObject } from "@rork-ai/toolkit-sdk";
 import { z } from "zod";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Crypto from "expo-crypto";
+import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { AnalysisResult } from "@/types/analysis";
 import { useScoreboard } from "@/contexts/ScoreboardContext";
@@ -207,6 +208,7 @@ export default function HomeScreen() {
       return result as AnalysisResult;
     },
     onSuccess: (data) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.push({
         pathname: "/results" as any,
         params: {
@@ -239,6 +241,7 @@ export default function HomeScreen() {
 
   const pickImage = async () => {
     console.log("Opening image picker - multiple selection, no cropping");
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsEditing: false,
