@@ -27,12 +27,17 @@ import {
   Skull,
   Target,
   Copy,
+  Download,
 } from "lucide-react-native";
 import type { AnalysisResult } from "@/types/analysis";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useScoreboard } from "@/contexts/ScoreboardContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import * as Clipboard from "expo-clipboard";
+import ViewShot, { captureRef } from "react-native-view-shot";
+import * as Sharing from "expo-sharing";
+import * as MediaLibrary from "expo-media-library";
+
 
 export default function ResultsScreen() {
   const params = useLocalSearchParams<{ data: string; images: string; savageMode: string }>();
@@ -41,6 +46,8 @@ export default function ResultsScreen() {
   const { addWin } = useScoreboard();
   const hasRecordedWin = useRef(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [isSavingCard, setIsSavingCard] = useState(false);
+  const cardRef = useRef<any>(null);
   const { t } = useLanguage();
   const isSavage = params.savageMode === "true";
 
@@ -97,7 +104,7 @@ export default function ResultsScreen() {
       msg += `🔥 SAVAGE ROAST:\n${analysis.savageRoast}\n\n`;
     }
 
-    msg += `${t('judgedBy')}\n${t('entertainmentPurposes')}`;
+    msg += `${t('judgedBy')}\n${t('entertainmentPurposes')}\n\n📲 She Said He Said`;
 
     return msg;
   }, [analysis, t, isSavage]);
@@ -105,6 +112,42 @@ export default function ResultsScreen() {
   const handleShare = () => {
     setShowShareModal(true);
   };
+
+  const handleDownloadCard = useCallback(async () => {
+    if (!cardRef.current || isSavingCard) return;
+    setIsSavingCard(true);
+    try {
+      if (Platform.OS === "web") {
+        const uri = await captureRef(cardRef, { format: "png", quality: 1 });
+        const link = document.createElement("a");
+        link.href = uri;
+        link.download = "she-said-he-said-result.png";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        Alert.alert("✅", t('cardSaved'));
+      } else {
+        const uri = await captureRef(cardRef, { format: "png", quality: 1 });
+        const { status } = await MediaLibrary.requestPermissionsAsync();
+        if (status === "granted") {
+          await MediaLibrary.saveToLibraryAsync(uri);
+          Alert.alert("✅", t('cardSaved'));
+        } else {
+          const isAvailable = await Sharing.isAvailableAsync();
+          if (isAvailable) {
+            await Sharing.shareAsync(uri, { mimeType: "image/png" });
+          } else {
+            Alert.alert(t('error'), t('cardSaveFailed'));
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Failed to save card:", error);
+      Alert.alert(t('error'), t('cardSaveFailed'));
+    } finally {
+      setIsSavingCard(false);
+    }
+  }, [isSavingCard, t]);
 
   const handleCopyText = async () => {
     const shareMessage = getShareMessage();
@@ -331,9 +374,10 @@ export default function ResultsScreen() {
 
               <View style={styles.resultCardContainer}>
                 <Text style={[styles.sectionTitle, { color: accentColor, marginBottom: 12 }]}>{t('resultCard')}</Text>
+                <ViewShot ref={cardRef} options={{ format: "png", quality: 1 }}>
                 <View style={[styles.shareableCard, isSavage && styles.shareableCardSavage]}>
                   <View style={styles.shareableCardTop}>
-                    <Text style={styles.shareableCardAppName}>Argument Judge</Text>
+                    <Text style={styles.shareableCardAppName}>She Said He Said</Text>
                     {isSavage && <Text style={styles.shareableCardSavageTag}>🔥 SAVAGE</Text>}
                   </View>
                   <View style={styles.shareableCardDivider} />
@@ -367,8 +411,22 @@ export default function ResultsScreen() {
                   ) : null}
                   <View style={styles.shareableCardFooter}>
                     <Text style={styles.shareableCardFooterText}>{t('entertainmentPurposes')}</Text>
+                    <Text style={styles.shareableCardBranding}>SheSaidHeSaid.app</Text>
                   </View>
                 </View>
+                </ViewShot>
+
+                <TouchableOpacity
+                  style={[styles.downloadCardButton, isSavage && styles.downloadCardButtonSavage, isSavingCard && { opacity: 0.6 }]}
+                  onPress={handleDownloadCard}
+                  activeOpacity={0.8}
+                  disabled={isSavingCard}
+                >
+                  <Download color={isSavage ? "#ef4444" : "#a78bfa"} size={18} />
+                  <Text style={[styles.downloadCardButtonText, isSavage && { color: "#ef4444" }]}>
+                    {isSavingCard ? "..." : t('downloadCard')}
+                  </Text>
+                </TouchableOpacity>
               </View>
 
               <TouchableOpacity
@@ -955,5 +1013,33 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600" as const,
     color: "rgba(255, 255, 255, 0.5)",
+  },
+  shareableCardBranding: {
+    fontSize: 11,
+    fontWeight: "700" as const,
+    color: "rgba(255, 255, 255, 0.35)",
+    marginTop: 6,
+    letterSpacing: 0.5,
+  },
+  downloadCardButton: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: 8,
+    marginTop: 12,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: "rgba(167, 139, 250, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(167, 139, 250, 0.25)",
+  },
+  downloadCardButtonSavage: {
+    backgroundColor: "rgba(239, 68, 68, 0.12)",
+    borderColor: "rgba(239, 68, 68, 0.3)",
+  },
+  downloadCardButtonText: {
+    fontSize: 15,
+    fontWeight: "600" as const,
+    color: "#a78bfa",
   },
 });

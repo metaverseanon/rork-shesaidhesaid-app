@@ -85,6 +85,9 @@ export const translations = {
     copyText: 'Copy Text',
     copiedToClipboard: 'Copied to clipboard!',
     resultCard: 'RESULT CARD',
+    downloadCard: 'Download Card',
+    cardSaved: 'Result card saved to your gallery!',
+    cardSaveFailed: 'Failed to save card. Please try again.',
     analyzingSavage: 'Roasting in progress... 🔥',
   },
   es: {
@@ -171,6 +174,9 @@ export const translations = {
     copyText: 'Copiar Texto',
     copiedToClipboard: '¡Copiado al portapapeles!',
     resultCard: 'TARJETA DE RESULTADO',
+    downloadCard: 'Descargar Tarjeta',
+    cardSaved: '¡Tarjeta guardada en tu galería!',
+    cardSaveFailed: 'Error al guardar la tarjeta. Inténtalo de nuevo.',
     analyzingSavage: 'Roasteando... 🔥',
   },
   de: {
@@ -257,6 +263,9 @@ export const translations = {
     copyText: 'Text kopieren',
     copiedToClipboard: 'In die Zwischenablage kopiert!',
     resultCard: 'ERGEBNISKARTE',
+    downloadCard: 'Karte herunterladen',
+    cardSaved: 'Ergebniskarte in Ihrer Galerie gespeichert!',
+    cardSaveFailed: 'Karte konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.',
     analyzingSavage: 'Wird geröstet... 🔥',
   },
 };
