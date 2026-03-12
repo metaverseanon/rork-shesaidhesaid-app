@@ -24,20 +24,25 @@ import {
   Sparkles,
   ArrowLeft,
   Share2,
+  Skull,
+  Target,
+  Copy,
 } from "lucide-react-native";
 import type { AnalysisResult } from "@/types/analysis";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useScoreboard } from "@/contexts/ScoreboardContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import * as Clipboard from "expo-clipboard";
 
 export default function ResultsScreen() {
-  const params = useLocalSearchParams<{ data: string; images: string }>();
+  const params = useLocalSearchParams<{ data: string; images: string; savageMode: string }>();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const { addWin } = useScoreboard();
   const hasRecordedWin = useRef(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const { t } = useLanguage();
+  const isSavage = params.savageMode === "true";
 
   let analysis: AnalysisResult | null = null;
   
@@ -51,7 +56,7 @@ export default function ResultsScreen() {
 
   useEffect(() => {
     if (analysis && !hasRecordedWin.current) {
-      addWin(analysis.winner);
+      void addWin(analysis.winner);
       hasRecordedWin.current = true;
     }
 
@@ -69,26 +74,46 @@ export default function ResultsScreen() {
     ]).start();
   }, [fadeAnim, slideAnim, analysis, addWin]);
 
-  const getShareMessage = () => {
+  const getShareMessage = useCallback(() => {
     if (!analysis) return "";
 
     const trophies = analysis.winner === analysis.faultPerson ? "😬" : "🏆";
     const loserEmoji = analysis.faultPerson === analysis.winner ? "" : "💀";
     
-    return `${trophies} ${t('shareResults')} ${trophies}\n\n` +
+    let msg = `${trophies} ${t('shareResults')} ${trophies}\n\n` +
       `🎯 ${t('winner')}: ${analysis.winner}\n` +
-      `${loserEmoji} ${t('atFault')}: ${analysis.faultPerson}\n\n` +
+      `${loserEmoji} ${t('atFault')}: ${analysis.faultPerson}\n` +
+      `👆 ${t('whoStartedIt')}: ${analysis.whoStartedIt}\n\n` +
       `📊 ${t('verdict')}:\n${analysis.winnerReason}\n\n` +
       `🔥 ${t('toxicity')}: ${analysis.toxicityLevel}% (${analysis.toxicityLabel})\n` +
       `🎭 ${t('pattern')}: ${analysis.argumentPattern}\n` +
-      `✅ ${t('credibility')}: ${analysis.yourCredibility}%\n\n` +
-      `${analysis.redFlags.length > 0 ? `🚩 ${t('redFlags')}: ${analysis.redFlags.join(", ")}\n\n` : ""}` +
-      `${t('judgedBy')}\n` +
-      `${t('entertainmentPurposes')}`;
-  };
+      `✅ ${t('credibility')}: ${analysis.yourCredibility}%\n\n`;
+
+    if (analysis.redFlags.length > 0) {
+      msg += `🚩 ${t('redFlags')}: ${analysis.redFlags.join(", ")}\n\n`;
+    }
+
+    if (isSavage && analysis.savageRoast) {
+      msg += `🔥 SAVAGE ROAST:\n${analysis.savageRoast}\n\n`;
+    }
+
+    msg += `${t('judgedBy')}\n${t('entertainmentPurposes')}`;
+
+    return msg;
+  }, [analysis, t, isSavage]);
 
   const handleShare = () => {
     setShowShareModal(true);
+  };
+
+  const handleCopyText = async () => {
+    const shareMessage = getShareMessage();
+    try {
+      await Clipboard.setStringAsync(shareMessage);
+      Alert.alert("✅", t('copiedToClipboard'));
+    } catch (error) {
+      console.error("Failed to copy:", error);
+    }
   };
 
   const handleWhatsAppShare = async () => {
@@ -120,10 +145,13 @@ export default function ResultsScreen() {
     );
   }
 
+  const accentColor = isSavage ? "#ef4444" : "#a78bfa";
+  const accentBg = isSavage ? "rgba(239, 68, 68, 0.15)" : "rgba(139, 92, 246, 0.1)";
+
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#0a0118", "#1a0f2e", "#2d1b4e"]}
+        colors={isSavage ? ["#1a0505", "#2e0a0a", "#3d1111"] : ["#0a0118", "#1a0f2e", "#2d1b4e"]}
         style={styles.gradient}
       >
         <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -133,9 +161,17 @@ export default function ResultsScreen() {
               onPress={() => router.back()}
               activeOpacity={0.7}
             >
-              <ArrowLeft color="#a78bfa" size={24} />
+              <ArrowLeft color={accentColor} size={24} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>{t('analysisComplete')}</Text>
+            <View style={styles.headerCenter}>
+              <Text style={styles.headerTitle}>{t('analysisComplete')}</Text>
+              {isSavage && (
+                <View style={styles.savageBadgeHeader}>
+                  <Skull color="#ef4444" size={12} />
+                  <Text style={styles.savageBadgeHeaderText}>{t('savage')}</Text>
+                </View>
+              )}
+            </View>
             <View style={styles.backButton} />
           </View>
 
@@ -153,10 +189,21 @@ export default function ResultsScreen() {
                 },
               ]}
             >
-              <View style={styles.verdictCard}>
+              {isSavage && analysis.savageRoast ? (
+                <View style={styles.savageRoastCard}>
+                  <View style={styles.savageRoastHeader}>
+                    <Skull color="#ef4444" size={20} />
+                    <Text style={styles.savageRoastLabel}>{t('savageRoast')}</Text>
+                    <Flame color="#f59e0b" size={16} />
+                  </View>
+                  <Text style={styles.savageRoastText}>{analysis.savageRoast}</Text>
+                </View>
+              ) : null}
+
+              <View style={[styles.verdictCard, isSavage && styles.verdictCardSavage]}>
                 <View style={styles.verdictHeader}>
-                  <Gavel color="#a78bfa" size={20} />
-                  <Text style={styles.verdictLabel}>{t('finalVerdict')}</Text>
+                  <Gavel color={accentColor} size={20} />
+                  <Text style={[styles.verdictLabel, { color: accentColor }]}>{t('finalVerdict')}</Text>
                 </View>
                 <Text style={styles.winnerText}>{analysis.winner} {t('won')}</Text>
                 <Text style={styles.winnerReason}>{analysis.winnerReason}</Text>
@@ -180,12 +227,21 @@ export default function ResultsScreen() {
                 </View>
               </View>
 
+              <View style={styles.whoStartedCard}>
+                <View style={styles.whoStartedHeader}>
+                  <Target color="#f59e0b" size={20} />
+                  <Text style={styles.whoStartedLabel}>{t('whoStartedIt')}</Text>
+                </View>
+                <Text style={styles.whoStartedName}>{analysis.whoStartedIt}</Text>
+                <Text style={styles.whoStartedReason}>{analysis.whoStartedReason}</Text>
+              </View>
+
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>{t('keyMetrics')}</Text>
+                <Text style={[styles.sectionTitle, { color: accentColor }]}>{t('keyMetrics')}</Text>
 
                 <View style={styles.metricsGrid}>
-                  <View style={styles.metricCard}>
-                    <View style={styles.metricIcon}>
+                  <View style={[styles.metricCard, isSavage && styles.metricCardSavage]}>
+                    <View style={[styles.metricIcon, { backgroundColor: accentBg }]}>
                       <Flame color="#f59e0b" size={24} />
                     </View>
                     <Text style={styles.metricLabel}>{t('toxicityLevel')}</Text>
@@ -197,9 +253,9 @@ export default function ResultsScreen() {
                     </Text>
                   </View>
 
-                  <View style={styles.metricCard}>
-                    <View style={styles.metricIcon}>
-                      <Eye color="#8b5cf6" size={24} />
+                  <View style={[styles.metricCard, isSavage && styles.metricCardSavage]}>
+                    <View style={[styles.metricIcon, { backgroundColor: accentBg }]}>
+                      <Eye color={accentColor} size={24} />
                     </View>
                     <Text style={styles.metricLabel}>{t('argumentPattern')}</Text>
                     <Text style={styles.metricPattern}>
@@ -211,7 +267,7 @@ export default function ResultsScreen() {
 
               {analysis.redFlags.length > 0 && (
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>{t('redFlagsDetected')}</Text>
+                  <Text style={[styles.sectionTitle, { color: accentColor }]}>{t('redFlagsDetected')}</Text>
                   <View style={styles.redFlagsContainer}>
                     {analysis.redFlags.map((flag, index) => (
                       <View key={index} style={styles.redFlagPill}>
@@ -225,19 +281,19 @@ export default function ResultsScreen() {
 
               <View style={styles.section}>
                 <View style={styles.evidenceHeader}>
-                  <Text style={styles.sectionTitle}>{t('evidenceLog')}</Text>
-                  <View style={styles.liveBadge}>
-                    <Sparkles color="#8b5cf6" size={12} />
-                    <Text style={styles.liveBadgeText}>{t('liveAnalysis')}</Text>
+                  <Text style={[styles.sectionTitle, { color: accentColor }]}>{t('evidenceLog')}</Text>
+                  <View style={[styles.liveBadge, { backgroundColor: `${accentColor}26` }]}>
+                    <Sparkles color={accentColor} size={12} />
+                    <Text style={[styles.liveBadgeText, { color: accentColor }]}>{t('liveAnalysis')}</Text>
                   </View>
                 </View>
 
                 <View style={styles.exhibitsContainer}>
                   {analysis.exhibits.map((exhibit, index) => (
-                    <View key={index} style={styles.exhibitCard}>
+                    <View key={index} style={[styles.exhibitCard, isSavage && { borderLeftColor: "#ef4444" }]}>
                       <View style={styles.exhibitHeader}>
-                        <View style={styles.exhibitBullet} />
-                        <Text style={styles.exhibitTitle}>{exhibit.title}</Text>
+                        <View style={[styles.exhibitBullet, { backgroundColor: isSavage ? "#ef4444" : "#8b5cf6" }]} />
+                        <Text style={[styles.exhibitTitle, { color: accentColor }]}>{exhibit.title}</Text>
                       </View>
                       <Text style={styles.exhibitDescription}>
                         {exhibit.description}
@@ -257,7 +313,7 @@ export default function ResultsScreen() {
                 if (imageList.length === 0) return null;
                 return (
                   <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>
+                    <Text style={[styles.sectionTitle, { color: accentColor }]}>
                       {t('originalScreenshot')}{imageList.length > 1 ? ` (${imageList.length})` : ''}
                     </Text>
                     {imageList.map((uri, idx) => (
@@ -273,8 +329,50 @@ export default function ResultsScreen() {
                 );
               })()}
 
+              <View style={styles.resultCardContainer}>
+                <Text style={[styles.sectionTitle, { color: accentColor, marginBottom: 12 }]}>{t('resultCard')}</Text>
+                <View style={[styles.shareableCard, isSavage && styles.shareableCardSavage]}>
+                  <View style={styles.shareableCardTop}>
+                    <Text style={styles.shareableCardAppName}>Argument Judge</Text>
+                    {isSavage && <Text style={styles.shareableCardSavageTag}>🔥 SAVAGE</Text>}
+                  </View>
+                  <View style={styles.shareableCardDivider} />
+                  <View style={styles.shareableCardRow}>
+                    <View style={styles.shareableCardCol}>
+                      <Text style={styles.shareableCardLabel}>🏆 {t('winner')}</Text>
+                      <Text style={styles.shareableCardValue}>{analysis.winner}</Text>
+                    </View>
+                    <View style={styles.shareableCardCol}>
+                      <Text style={styles.shareableCardLabel}>💀 {t('atFault')}</Text>
+                      <Text style={styles.shareableCardValue}>{analysis.faultPerson}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.shareableCardRow}>
+                    <View style={styles.shareableCardCol}>
+                      <Text style={styles.shareableCardLabel}>👆 {t('whoStartedIt')}</Text>
+                      <Text style={styles.shareableCardValue}>{analysis.whoStartedIt}</Text>
+                    </View>
+                    <View style={styles.shareableCardCol}>
+                      <Text style={styles.shareableCardLabel}>🔥 {t('toxicity')}</Text>
+                      <Text style={styles.shareableCardValue}>{analysis.toxicityLevel}%</Text>
+                    </View>
+                  </View>
+                  <View style={styles.shareableCardDivider} />
+                  <Text style={styles.shareableCardVerdict}>{analysis.winnerReason}</Text>
+                  {isSavage && analysis.savageRoast ? (
+                    <>
+                      <View style={styles.shareableCardDivider} />
+                      <Text style={styles.shareableCardRoast}>🔥 {analysis.savageRoast}</Text>
+                    </>
+                  ) : null}
+                  <View style={styles.shareableCardFooter}>
+                    <Text style={styles.shareableCardFooterText}>{t('entertainmentPurposes')}</Text>
+                  </View>
+                </View>
+              </View>
+
               <TouchableOpacity
-                style={styles.shareButton}
+                style={[styles.shareButton, isSavage && { backgroundColor: "#dc2626" }]}
                 onPress={handleShare}
                 activeOpacity={0.8}
               >
@@ -307,6 +405,15 @@ export default function ResultsScreen() {
                     </TouchableOpacity>
 
                     <TouchableOpacity
+                      style={styles.copyButton}
+                      onPress={handleCopyText}
+                      activeOpacity={0.8}
+                    >
+                      <Copy color="#a78bfa" size={16} />
+                      <Text style={styles.copyButtonText}>{t('copyText')}</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
                       style={styles.closeModalButton}
                       onPress={() => setShowShareModal(false)}
                       activeOpacity={0.8}
@@ -318,7 +425,7 @@ export default function ResultsScreen() {
               </Modal>
 
               <TouchableOpacity
-                style={styles.analyzeButton}
+                style={[styles.analyzeButton, isSavage && { borderColor: "rgba(239, 68, 68, 0.3)" }]}
                 onPress={() => router.back()}
                 activeOpacity={0.8}
               >
@@ -352,6 +459,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "rgba(167, 139, 250, 0.1)",
   },
+  headerCenter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   backButton: {
     width: 40,
     height: 40,
@@ -360,8 +472,25 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "600" as const,
     color: "#ffffff",
+  },
+  savageBadgeHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 4,
+    backgroundColor: "rgba(239, 68, 68, 0.2)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(239, 68, 68, 0.4)",
+  },
+  savageBadgeHeaderText: {
+    fontSize: 10,
+    fontWeight: "800" as const,
+    color: "#ef4444",
+    letterSpacing: 1,
   },
   scrollView: {
     flex: 1,
@@ -374,12 +503,43 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     gap: 24,
   },
+  savageRoastCard: {
+    backgroundColor: "rgba(239, 68, 68, 0.08)",
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: "rgba(239, 68, 68, 0.3)",
+    padding: 20,
+  },
+  savageRoastHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    marginBottom: 12,
+  },
+  savageRoastLabel: {
+    fontSize: 12,
+    fontWeight: "800" as const,
+    color: "#ef4444",
+    letterSpacing: 1.5,
+    flex: 1,
+  },
+  savageRoastText: {
+    fontSize: 16,
+    fontWeight: "600" as const,
+    color: "rgba(255, 255, 255, 0.9)",
+    lineHeight: 24,
+    fontStyle: "italic" as const,
+  },
   verdictCard: {
     backgroundColor: "rgba(30, 20, 60, 0.6)",
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "rgba(167, 139, 250, 0.2)",
     padding: 24,
+  },
+  verdictCardSavage: {
+    borderColor: "rgba(239, 68, 68, 0.25)",
+    backgroundColor: "rgba(60, 20, 20, 0.4)",
   },
   verdictHeader: {
     flexDirection: "row",
@@ -389,13 +549,13 @@ const styles = StyleSheet.create({
   },
   verdictLabel: {
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "700" as const,
     color: "#a78bfa",
     letterSpacing: 1.2,
   },
   winnerText: {
     fontSize: 32,
-    fontWeight: "700",
+    fontWeight: "700" as const,
     color: "#ffffff",
     marginBottom: 8,
   },
@@ -419,7 +579,7 @@ const styles = StyleSheet.create({
   },
   scorePercentage: {
     fontSize: 28,
-    fontWeight: "700",
+    fontWeight: "700" as const,
     color: "#10b981",
   },
   scoreLabel: {
@@ -433,18 +593,48 @@ const styles = StyleSheet.create({
   faultLabel: {
     fontSize: 14,
     color: "#ef4444",
-    fontWeight: "600",
+    fontWeight: "600" as const,
   },
   faultName: {
     fontSize: 13,
     color: "rgba(255, 255, 255, 0.7)",
+  },
+  whoStartedCard: {
+    backgroundColor: "rgba(245, 158, 11, 0.08)",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(245, 158, 11, 0.25)",
+    padding: 20,
+  },
+  whoStartedHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    marginBottom: 12,
+  },
+  whoStartedLabel: {
+    fontSize: 12,
+    fontWeight: "700" as const,
+    color: "#f59e0b",
+    letterSpacing: 1.2,
+  },
+  whoStartedName: {
+    fontSize: 24,
+    fontWeight: "700" as const,
+    color: "#fbbf24",
+    marginBottom: 6,
+  },
+  whoStartedReason: {
+    fontSize: 14,
+    color: "rgba(255, 255, 255, 0.65)",
+    lineHeight: 20,
   },
   section: {
     gap: 16,
   },
   sectionTitle: {
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "700" as const,
     color: "#a78bfa",
     letterSpacing: 1.2,
   },
@@ -459,6 +649,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(167, 139, 250, 0.15)",
     padding: 20,
+  },
+  metricCardSavage: {
+    borderColor: "rgba(239, 68, 68, 0.15)",
+    backgroundColor: "rgba(60, 20, 20, 0.3)",
   },
   metricIcon: {
     width: 44,
@@ -476,7 +670,7 @@ const styles = StyleSheet.create({
   },
   metricValue: {
     fontSize: 24,
-    fontWeight: "700",
+    fontWeight: "700" as const,
     color: "#ffffff",
   },
   metricValueLabel: {
@@ -485,7 +679,7 @@ const styles = StyleSheet.create({
   },
   metricPattern: {
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "600" as const,
     color: "#ffffff",
   },
   redFlagsContainer: {
@@ -505,7 +699,7 @@ const styles = StyleSheet.create({
   redFlagText: {
     flex: 1,
     fontSize: 13,
-    fontWeight: "500",
+    fontWeight: "500" as const,
     color: "#ef4444",
   },
   evidenceHeader: {
@@ -524,7 +718,7 @@ const styles = StyleSheet.create({
   },
   liveBadgeText: {
     fontSize: 10,
-    fontWeight: "700",
+    fontWeight: "700" as const,
     color: "#a78bfa",
     letterSpacing: 0.8,
   },
@@ -552,7 +746,7 @@ const styles = StyleSheet.create({
   },
   exhibitTitle: {
     fontSize: 15,
-    fontWeight: "600",
+    fontWeight: "600" as const,
     color: "#a78bfa",
   },
   exhibitDescription: {
@@ -572,6 +766,81 @@ const styles = StyleSheet.create({
     width: "100%",
     aspectRatio: 0.75,
   },
+  resultCardContainer: {
+    gap: 0,
+  },
+  shareableCard: {
+    backgroundColor: "rgba(20, 14, 40, 0.95)",
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: "rgba(167, 139, 250, 0.3)",
+    padding: 20,
+    overflow: "hidden" as const,
+  },
+  shareableCardSavage: {
+    borderColor: "rgba(239, 68, 68, 0.4)",
+    backgroundColor: "rgba(40, 10, 10, 0.95)",
+  },
+  shareableCardTop: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    marginBottom: 12,
+  },
+  shareableCardAppName: {
+    fontSize: 14,
+    fontWeight: "800" as const,
+    color: "rgba(255, 255, 255, 0.5)",
+    letterSpacing: 2,
+  },
+  shareableCardSavageTag: {
+    fontSize: 12,
+    fontWeight: "700" as const,
+    color: "#ef4444",
+  },
+  shareableCardDivider: {
+    height: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    marginVertical: 12,
+  },
+  shareableCardRow: {
+    flexDirection: "row" as const,
+    gap: 16,
+    marginBottom: 12,
+  },
+  shareableCardCol: {
+    flex: 1,
+  },
+  shareableCardLabel: {
+    fontSize: 11,
+    color: "rgba(255, 255, 255, 0.45)",
+    marginBottom: 4,
+  },
+  shareableCardValue: {
+    fontSize: 16,
+    fontWeight: "700" as const,
+    color: "#ffffff",
+  },
+  shareableCardVerdict: {
+    fontSize: 13,
+    color: "rgba(255, 255, 255, 0.7)",
+    lineHeight: 20,
+    fontStyle: "italic" as const,
+  },
+  shareableCardRoast: {
+    fontSize: 13,
+    color: "#f87171",
+    lineHeight: 20,
+    fontStyle: "italic" as const,
+  },
+  shareableCardFooter: {
+    marginTop: 14,
+    alignItems: "center" as const,
+  },
+  shareableCardFooterText: {
+    fontSize: 10,
+    color: "rgba(255, 255, 255, 0.3)",
+  },
   shareButton: {
     borderRadius: 16,
     backgroundColor: "#10b981",
@@ -584,7 +853,7 @@ const styles = StyleSheet.create({
   },
   shareButtonText: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "600" as const,
     color: "#ffffff",
   },
   analyzeButton: {
@@ -598,19 +867,19 @@ const styles = StyleSheet.create({
   },
   analyzeButtonText: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "600" as const,
     color: "#ffffff",
   },
   errorText: {
     color: "#ef4444",
     fontSize: 16,
-    textAlign: "center",
+    textAlign: "center" as const,
   },
   shareModalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.9)",
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
     paddingHorizontal: 20,
   },
   shareModalContent: {
@@ -628,10 +897,10 @@ const styles = StyleSheet.create({
     fontWeight: "700" as const,
     color: "#ffffff",
     marginBottom: 20,
-    textAlign: "center",
+    textAlign: "center" as const,
   },
   sharePreviewScroll: {
-    maxHeight: 400,
+    maxHeight: 300,
     marginBottom: 20,
   },
   sharePreviewCard: {
@@ -651,25 +920,40 @@ const styles = StyleSheet.create({
     backgroundColor: "#25D366",
     borderRadius: 16,
     paddingVertical: 16,
-    alignItems: "center",
-    marginBottom: 12,
+    alignItems: "center" as const,
+    marginBottom: 10,
   },
   whatsappButtonText: {
     fontSize: 16,
     fontWeight: "600" as const,
     color: "#ffffff",
   },
-  closeModalButton: {
-    backgroundColor: "rgba(167, 139, 250, 0.2)",
+  copyButton: {
+    flexDirection: "row" as const,
+    backgroundColor: "rgba(167, 139, 250, 0.15)",
     borderRadius: 16,
     paddingVertical: 14,
-    alignItems: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: 8,
+    marginBottom: 10,
     borderWidth: 1,
-    borderColor: "rgba(167, 139, 250, 0.3)",
+    borderColor: "rgba(167, 139, 250, 0.25)",
+  },
+  copyButtonText: {
+    fontSize: 15,
+    fontWeight: "600" as const,
+    color: "#a78bfa",
+  },
+  closeModalButton: {
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    borderRadius: 16,
+    paddingVertical: 14,
+    alignItems: "center" as const,
   },
   closeModalButtonText: {
     fontSize: 15,
     fontWeight: "600" as const,
-    color: "#a78bfa",
+    color: "rgba(255, 255, 255, 0.5)",
   },
 });

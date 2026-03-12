@@ -9,10 +9,11 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 import { ScoreboardProvider } from "@/contexts/ScoreboardContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { HistoryProvider } from "@/contexts/HistoryContext";
 import { trpc, trpcClient } from "@/lib/trpc";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
+void SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
@@ -21,6 +22,7 @@ function RootLayoutNav() {
     <Stack screenOptions={{ headerBackTitle: "Back", headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="results" />
+      <Stack.Screen name="history" />
     </Stack>
   );
 }
@@ -29,7 +31,7 @@ export default function RootLayout() {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    SplashScreen.hideAsync();
+    void SplashScreen.hideAsync();
     
     const timer = setTimeout(() => {
       setShowSplash(false);
@@ -60,9 +62,11 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <LanguageProvider>
           <ScoreboardProvider>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <RootLayoutNav />
-            </GestureHandlerRootView>
+            <HistoryProvider>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <RootLayoutNav />
+              </GestureHandlerRootView>
+            </HistoryProvider>
           </ScoreboardProvider>
         </LanguageProvider>
       </QueryClientProvider>

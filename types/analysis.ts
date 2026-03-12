@@ -12,4 +12,14 @@ export interface AnalysisResult {
     title: string;
     description: string;
   }[];
+  whoStartedIt: string;
+  whoStartedReason: string;
+  savageRoast?: string;
+}
+
+export interface HistoryEntry {
+  id: string;
+  date: string;
+  analysis: AnalysisResult;
+  savageMode: boolean;
 }

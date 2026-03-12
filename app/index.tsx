@@ -10,13 +10,14 @@ import {
   Alert,
   TextInput,
   ScrollView,
+  Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { Upload, Trophy, Globe, Medal, Pencil, ArrowLeftRight, Trash2 } from "lucide-react-native";
+import { Upload, Globe, Medal, Pencil, ArrowLeftRight, Trash2, Flame, Clock, Skull } from "lucide-react-native";
 import { useMutation } from "@tanstack/react-query";
 import { generateObject } from "@rork-ai/toolkit-sdk";
 import { z } from "zod";
@@ -27,6 +28,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { AnalysisResult } from "@/types/analysis";
 import { useScoreboard } from "@/contexts/ScoreboardContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useHistory } from "@/contexts/HistoryContext";
+
+const SAVAGE_MODE_KEY = "savage_mode";
 
 const validationSchema = z.object({
   isValidChat: z.boolean().describe("Whether the image is a screenshot of a conversation/chat between people"),
@@ -71,30 +75,65 @@ const analysisSchema = z.object({
       })
     )
     .describe("Key evidence exhibits from the conversation"),
+  whoStartedIt: z.string().describe("The name of the person who started/instigated the argument"),
+  whoStartedReason: z.string().describe("Brief explanation of why this person is considered the instigator"),
+  savageRoast: z.string().optional().describe("A brutal, funny roast of both participants and the argument itself. Only included when savage mode is on."),
 });
 
 export default function HomeScreen() {
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [savageMode, setSavageMode] = useState(false);
   const { scores, renamePerson, addPerson, clearScoreboard, player1Color, player2Color, toggleColors } = useScoreboard();
   const { t, language, setLanguage } = useLanguage();
+  const { addEntry, history } = useHistory();
   const [editNameModal, setEditNameModal] = useState(false);
   const [editingName, setEditingName] = useState("");
   const [newNameInput, setNewNameInput] = useState("");
+  const [savageAnim] = useState(new Animated.Value(0));
 
   useEffect(() => {
-    checkConsent();
-    ImagePicker.requestMediaLibraryPermissionsAsync().then((result) => {
+    void checkConsent();
+    void loadSavageMode();
+    void ImagePicker.requestMediaLibraryPermissionsAsync().then((result) => {
       console.log("Media library permission pre-requested:", result.status);
     });
   }, []);
+
+  useEffect(() => {
+    Animated.timing(savageAnim, {
+      toValue: savageMode ? 1 : 0,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  }, [savageMode, savageAnim]);
 
   const checkConsent = async () => {
     const consent = await AsyncStorage.getItem("user_consent");
     if (!consent) {
       setShowConsentModal(true);
     }
+  };
+
+  const loadSavageMode = async () => {
+    try {
+      const stored = await AsyncStorage.getItem(SAVAGE_MODE_KEY);
+      if (stored === "true") {
+        setSavageMode(true);
+      }
+    } catch (error) {
+      console.error("Failed to load savage mode:", error);
+    }
+  };
+
+  const toggleSavageMode = () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    const newVal = !savageMode;
+    setSavageMode(newVal);
+    void AsyncStorage.setItem(SAVAGE_MODE_KEY, newVal ? "true" : "false").catch((error) => {
+      console.error("Failed to save savage mode:", error);
+    });
   };
 
   const handleAcceptConsent = async () => {
@@ -104,7 +143,7 @@ export default function HomeScreen() {
 
   const analysisMutation = useMutation({
     mutationFn: async (imageUris: string[]) => {
-      console.log("Starting analysis for images:", imageUris.length);
+      console.log("Starting analysis for images:", imageUris.length, "savage:", savageMode);
 
       const base64Images: string[] = [];
       for (const imageUri of imageUris) {
@@ -158,7 +197,7 @@ export default function HomeScreen() {
 
       const combinedHash = await Crypto.digestStringAsync(
         Crypto.CryptoDigestAlgorithm.SHA256,
-        base64Images.join("_")
+        base64Images.join("_") + (savageMode ? "_savage" : "_normal")
       );
       console.log("Combined image hash:", combinedHash);
 
@@ -184,6 +223,10 @@ export default function HomeScreen() {
         ? `\n\nIMPORTANT: These ${base64Images.length} images are parts of the SAME conversation, in order. Analyze them together as one continuous conversation.`
         : "";
 
+      const savagePrompt = savageMode
+        ? `\n\n🔥 SAVAGE MODE ACTIVATED 🔥\nBe BRUTALLY honest and hilariously savage in your analysis. Roast both participants mercilessly. Don't hold back. Use dark humor, sarcasm, and absolutely destroy them with your wit. The savageRoast field should be a 2-3 sentence absolutely devastating roast of the entire argument and both people involved. Make it so brutal they'll need therapy after reading it. Be creative, funny, and ruthless.`
+        : "\n\nBe humorous but fair in your analysis. Leave savageRoast empty.";
+
       console.log("No cache found, analyzing images...");
       const result = await generateObject({
         messages: [
@@ -193,7 +236,7 @@ export default function HomeScreen() {
               ...imageContentParts,
               {
                 type: "text",
-                text: `Analyze this argument/conversation screenshot. Determine who won the argument based on logical consistency, emotional stability, and communication effectiveness. Identify red flags, toxicity levels, and argument patterns. Be humorous but fair in your analysis.\n\nIMPORTANT for naming the people:\n- The person whose messages appear on the RIGHT side (typically colored/blue/green bubbles) should be called \"You\"\n- The person whose messages appear on the LEFT side (typically grey/white bubbles) is the other person\n- If you can see a contact name or profile name at the top of the chat, use that for the other person\n- If no name is visible, give the other person a funny descriptive nickname based on their personality in the conversation (e.g. \"Drama Queen\", \"Captain Excuses\", \"The Deflector\", \"Mr. Always Right\", etc.)\n- Use these names consistently for winner, faultPerson, and all references${multiImageNote}`,
+                text: `Analyze this argument/conversation screenshot. Determine who won the argument based on logical consistency, emotional stability, and communication effectiveness. Identify red flags, toxicity levels, and argument patterns.${savagePrompt}\n\nAlso determine WHO STARTED the argument - identify the instigator who escalated things first or brought up the conflict. Explain briefly why.\n\nIMPORTANT for naming the people:\n- The person whose messages appear on the RIGHT side (typically colored/blue/green bubbles) should be called 'You'\n- The person whose messages appear on the LEFT side (typically grey/white bubbles) is the other person\n- If you can see a contact name or profile name at the top of the chat, use that for the other person\n- If no name is visible, give the other person a funny descriptive nickname based on their personality in the conversation (e.g. Drama Queen, Captain Excuses, The Deflector, Mr. Always Right, etc.)\n- Use these names consistently for winner, faultPerson, whoStartedIt, and all references${multiImageNote}`,
               },
             ],
           },
@@ -208,12 +251,14 @@ export default function HomeScreen() {
       return result as AnalysisResult;
     },
     onSuccess: (data) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      void addEntry(data, savageMode);
       router.push({
         pathname: "/results" as any,
         params: {
           data: JSON.stringify(data),
           images: JSON.stringify(selectedImages),
+          savageMode: savageMode ? "true" : "false",
         },
       });
     },
@@ -241,7 +286,7 @@ export default function HomeScreen() {
 
   const pickImage = async () => {
     console.log("Opening image picker - multiple selection, no cropping");
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsEditing: false,
@@ -259,7 +304,15 @@ export default function HomeScreen() {
     }
   };
 
+  const savageBgColor = savageAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["rgba(167, 139, 250, 0.12)", "rgba(239, 68, 68, 0.2)"],
+  });
 
+  const savageBorderColor = savageAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["rgba(167, 139, 250, 0.25)", "rgba(239, 68, 68, 0.5)"],
+  });
 
   return (
     <View style={styles.container}>
@@ -293,19 +346,33 @@ export default function HomeScreen() {
         </View>
       </Modal>
       <LinearGradient
-        colors={["#0a0118", "#1a0f2e", "#2d1b4e"]}
+        colors={savageMode ? ["#1a0505", "#2e0a0a", "#3d1111"] : ["#0a0118", "#1a0f2e", "#2d1b4e"]}
         style={styles.gradient}
       >
         <SafeAreaView style={styles.safeArea}>
           <ScrollView contentContainerStyle={styles.contentScroll} bounces={true} showsVerticalScrollIndicator={false}>
           <View style={styles.content}>
-            <TouchableOpacity
-              style={styles.languageToggle}
-              onPress={() => setShowLanguageModal(true)}
-              activeOpacity={0.7}
-            >
-              <Globe color="#a78bfa" size={20} />
-            </TouchableOpacity>
+            <View style={styles.topBar}>
+              {history.length > 0 ? (
+                <TouchableOpacity
+                  style={styles.historyButton}
+                  onPress={() => router.push("/history" as any)}
+                  activeOpacity={0.7}
+                >
+                  <Clock color={savageMode ? "#f87171" : "#a78bfa"} size={18} />
+                  <Text style={[styles.historyButtonText, savageMode && { color: "#f87171" }]}>{t('argumentHistory')}</Text>
+                </TouchableOpacity>
+              ) : (
+                <View />
+              )}
+              <TouchableOpacity
+                style={styles.languageToggle}
+                onPress={() => setShowLanguageModal(true)}
+                activeOpacity={0.7}
+              >
+                <Globe color={savageMode ? "#f87171" : "#a78bfa"} size={20} />
+              </TouchableOpacity>
+            </View>
 
             <Modal
               visible={showLanguageModal}
@@ -324,7 +391,7 @@ export default function HomeScreen() {
                   <TouchableOpacity
                     style={[styles.languageOption, language === 'en' && styles.languageOptionActive]}
                     onPress={() => {
-                      setLanguage('en');
+                      void setLanguage('en');
                       setShowLanguageModal(false);
                     }}
                     activeOpacity={0.7}
@@ -337,7 +404,7 @@ export default function HomeScreen() {
                   <TouchableOpacity
                     style={[styles.languageOption, language === 'es' && styles.languageOptionActive]}
                     onPress={() => {
-                      setLanguage('es');
+                      void setLanguage('es');
                       setShowLanguageModal(false);
                     }}
                     activeOpacity={0.7}
@@ -350,7 +417,7 @@ export default function HomeScreen() {
                   <TouchableOpacity
                     style={[styles.languageOption, language === 'de' && styles.languageOptionActive]}
                     onPress={() => {
-                      setLanguage('de');
+                      void setLanguage('de');
                       setShowLanguageModal(false);
                     }}
                     activeOpacity={0.7}
@@ -370,13 +437,40 @@ export default function HomeScreen() {
                   contentFit="contain"
                 />
               </View>
-              <Text style={styles.appSubtitle}>{t('appSubtitle')}</Text>
+              <Text style={[styles.appSubtitle, savageMode && { color: "#ef4444" }]}>{t('appSubtitle')}</Text>
               <Text style={styles.subtitle}>
                 {t('subtitle')}
               </Text>
               <Text style={styles.disclaimer}>
                 {t('disclaimer')}
               </Text>
+
+              <Animated.View style={[styles.savageModeCard, { backgroundColor: savageBgColor, borderColor: savageBorderColor }]}>
+                <TouchableOpacity
+                  style={styles.savageModeInner}
+                  onPress={toggleSavageMode}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.savageModeLeft}>
+                    {savageMode ? (
+                      <Skull color="#ef4444" size={22} />
+                    ) : (
+                      <Flame color="#a78bfa" size={22} />
+                    )}
+                    <View>
+                      <Text style={[styles.savageModeTitle, savageMode && { color: "#ef4444" }]}>
+                        {t('savageMode')}
+                      </Text>
+                      <Text style={styles.savageModeDesc}>
+                        {savageMode ? t('savageModeDesc') : t('normalModeDesc')}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={[styles.savageToggle, savageMode && styles.savageToggleOn]}>
+                    <View style={[styles.savageToggleDot, savageMode && styles.savageToggleDotOn]} />
+                  </View>
+                </TouchableOpacity>
+              </Animated.View>
 
               {scores.length >= 1 && (() => {
                 const player1 = scores[0];
@@ -516,9 +610,9 @@ export default function HomeScreen() {
                       onPress={() => {
                         if (newNameInput.trim()) {
                           if (editingName === '__next_challenger__') {
-                            addPerson(newNameInput.trim());
+                            void addPerson(newNameInput.trim());
                           } else {
-                            renamePerson(editingName, newNameInput.trim());
+                            void renamePerson(editingName, newNameInput.trim());
                           }
                           setEditNameModal(false);
                         }
@@ -542,13 +636,15 @@ export default function HomeScreen() {
 
             {analysisMutation.isPending ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#a78bfa" />
-                <Text style={styles.loadingText}>{t('analyzingArgument')}</Text>
+                <ActivityIndicator size="large" color={savageMode ? "#ef4444" : "#a78bfa"} />
+                <Text style={[styles.loadingText, savageMode && { color: "#ef4444" }]}>
+                  {savageMode ? t('analyzingSavage') : t('analyzingArgument')}
+                </Text>
               </View>
             ) : (
               <View style={styles.uploadSection}>
                 <TouchableOpacity
-                  style={styles.uploadButton}
+                  style={[styles.uploadButton, savageMode && { backgroundColor: "#dc2626" }]}
                   onPress={pickImage}
                   activeOpacity={0.8}
                 >
@@ -596,6 +692,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     justifyContent: "space-between",
   },
+  topBar: {
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
+    marginTop: 8,
+  },
+  historyButton: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+    padding: 10,
+    backgroundColor: "rgba(167, 139, 250, 0.15)",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(167, 139, 250, 0.3)",
+  },
+  historyButtonText: {
+    fontSize: 13,
+    fontWeight: "600" as const,
+    color: "#a78bfa",
+  },
   header: {
     alignItems: "center",
     marginTop: 10,
@@ -612,14 +729,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 36,
-    fontWeight: "700",
+    fontWeight: "700" as const,
     color: "#ffffff",
     marginBottom: 8,
     letterSpacing: -0.5,
   },
   appSubtitle: {
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "600" as const,
     color: "#a78bfa",
     marginBottom: 12,
   },
@@ -634,39 +751,88 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "rgba(255, 255, 255, 0.4)",
     textAlign: "center",
-    fontStyle: "italic",
+    fontStyle: "italic" as const,
+  },
+  savageModeCard: {
+    marginTop: 16,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    width: "100%",
+    overflow: "hidden" as const,
+  },
+  savageModeInner: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  savageModeLeft: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 12,
+  },
+  savageModeTitle: {
+    fontSize: 15,
+    fontWeight: "700" as const,
+    color: "#a78bfa",
+  },
+  savageModeDesc: {
+    fontSize: 11,
+    color: "rgba(255, 255, 255, 0.45)",
+    marginTop: 1,
+  },
+  savageToggle: {
+    width: 48,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    justifyContent: "center" as const,
+    paddingHorizontal: 3,
+  },
+  savageToggleOn: {
+    backgroundColor: "rgba(239, 68, 68, 0.6)",
+  },
+  savageToggleDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
+  },
+  savageToggleDotOn: {
+    alignSelf: "flex-end" as const,
+    backgroundColor: "#ffffff",
   },
   uploadSection: {
     gap: 16,
   },
   uploadButton: {
     borderRadius: 16,
-    overflow: "hidden",
+    overflow: "hidden" as const,
     backgroundColor: "#7c3aed",
   },
   uploadButtonGradient: {
     paddingVertical: 20,
     paddingHorizontal: 32,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     gap: 12,
   },
   uploadButtonText: {
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "600" as const,
     color: "#ffffff",
   },
-
   loadingContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
     gap: 16,
   },
   loadingText: {
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "600" as const,
     color: "#a78bfa",
   },
   errorContainer: {
@@ -679,7 +845,7 @@ const styles = StyleSheet.create({
   errorText: {
     color: "#f87171",
     fontSize: 14,
-    textAlign: "center",
+    textAlign: "center" as const,
   },
   scoreboardCard: {
     marginTop: 18,
@@ -934,8 +1100,8 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.85)",
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
     paddingHorizontal: 24,
   },
   modalContent: {
@@ -957,7 +1123,7 @@ const styles = StyleSheet.create({
     fontWeight: "700" as const,
     color: "#ffffff",
     marginBottom: 16,
-    textAlign: "center",
+    textAlign: "center" as const,
   },
   modalText: {
     fontSize: 15,
@@ -980,14 +1146,14 @@ const styles = StyleSheet.create({
     color: "rgba(255, 255, 255, 0.5)",
     lineHeight: 18,
     marginBottom: 24,
-    textAlign: "center",
+    textAlign: "center" as const,
     fontStyle: "italic" as const,
   },
   acceptButton: {
     backgroundColor: "#7c3aed",
     borderRadius: 16,
     paddingVertical: 16,
-    alignItems: "center",
+    alignItems: "center" as const,
   },
   acceptButtonText: {
     fontSize: 16,
@@ -995,13 +1161,11 @@ const styles = StyleSheet.create({
     color: "#ffffff",
   },
   languageToggle: {
-    alignSelf: "flex-end" as const,
     padding: 10,
     backgroundColor: "rgba(167, 139, 250, 0.15)",
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "rgba(167, 139, 250, 0.3)",
-    marginTop: 8,
   },
   languageModalOverlay: {
     flex: 1,
