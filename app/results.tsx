@@ -10,6 +10,7 @@ import {
   Alert,
   Modal,
   Linking,
+  Share,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -35,7 +36,6 @@ import { useScoreboard } from "@/contexts/ScoreboardContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import * as Clipboard from "expo-clipboard";
 import ViewShot, { captureRef } from "react-native-view-shot";
-import * as Sharing from "expo-sharing";
 import * as MediaLibrary from "expo-media-library";
 
 
@@ -133,10 +133,9 @@ export default function ResultsScreen() {
           await MediaLibrary.saveToLibraryAsync(uri);
           Alert.alert("✅", t('cardSaved'));
         } else {
-          const isAvailable = await Sharing.isAvailableAsync();
-          if (isAvailable) {
-            await Sharing.shareAsync(uri, { mimeType: "image/png" });
-          } else {
+          try {
+            await Share.share({ url: uri });
+          } catch {
             Alert.alert(t('error'), t('cardSaveFailed'));
           }
         }
