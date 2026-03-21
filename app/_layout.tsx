@@ -13,6 +13,7 @@ import { ScoreboardProvider } from "@/contexts/ScoreboardContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { HistoryProvider } from "@/contexts/HistoryContext";
 import { PremiumProvider } from "@/contexts/PremiumContext";
+import { NotificationProvider } from "@/contexts/NotificationContext";
 import { trpc, trpcClient } from "@/lib/trpc";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -87,13 +88,15 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <LanguageProvider>
           <PremiumProvider>
-            <ScoreboardProvider>
-              <HistoryProvider>
-                <GestureHandlerRootView style={{ flex: 1 }}>
-                  <RootLayoutNav />
-                </GestureHandlerRootView>
-              </HistoryProvider>
-            </ScoreboardProvider>
+            <NotificationProvider>
+              <ScoreboardProvider>
+                <HistoryProvider>
+                  <GestureHandlerRootView style={{ flex: 1 }}>
+                    <RootLayoutNav />
+                  </GestureHandlerRootView>
+                </HistoryProvider>
+              </ScoreboardProvider>
+            </NotificationProvider>
           </PremiumProvider>
         </LanguageProvider>
       </QueryClientProvider>
