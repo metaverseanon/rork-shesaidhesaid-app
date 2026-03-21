@@ -2,11 +2,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { View, StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Onboarding from "@/components/Onboarding";
 import { ScoreboardProvider } from "@/contexts/ScoreboardContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { HistoryProvider } from "@/contexts/HistoryContext";
@@ -30,17 +32,33 @@ function RootLayoutNav() {
   );
 }
 
+const ONBOARDING_KEY = "onboarding_completed";
+
 export default function RootLayout() {
   const [showSplash, setShowSplash] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
 
   useEffect(() => {
     void SplashScreen.hideAsync();
+
+    AsyncStorage.getItem(ONBOARDING_KEY).then((value) => {
+      setShowOnboarding(value !== "true");
+      console.log("Onboarding completed:", value === "true");
+    }).catch(() => {
+      setShowOnboarding(true);
+    });
     
     const timer = setTimeout(() => {
       setShowSplash(false);
     }, 3000);
 
     return () => clearTimeout(timer);
+  }, []);
+
+  const handleOnboardingComplete = useCallback(() => {
+    void AsyncStorage.setItem(ONBOARDING_KEY, "true");
+    setShowOnboarding(false);
+    console.log("Onboarding completed, saving state");
   }, []);
 
   if (showSplash) {
@@ -58,6 +76,10 @@ export default function RootLayout() {
         </LinearGradient>
       </View>
     );
+  }
+
+  if (showOnboarding) {
+    return <Onboarding onComplete={handleOnboardingComplete} />;
   }
 
   return (
