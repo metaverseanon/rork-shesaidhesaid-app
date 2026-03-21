@@ -10,7 +10,6 @@ import {
   Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import {
   Scale,
@@ -182,17 +181,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                   </View>
                 </Animated.View>
 
-                {index === 0 && (
-                  <Animated.View style={[styles.logoWrapper, { opacity: iconOpacity }]}>
-                    <Image
-                      source={{
-                        uri: "https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/ck2usccc253nb3nzwom89",
-                      }}
-                      style={styles.logoImage}
-                      contentFit="contain"
-                    />
-                  </Animated.View>
-                )}
+
               </View>
 
               <Animated.View
@@ -368,15 +357,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
   },
-  logoWrapper: {
-    position: "absolute",
-    top: -40,
-    alignItems: "center",
-  },
-  logoImage: {
-    width: 100,
-    height: 100,
-  },
+
   textArea: {
     alignItems: "center",
     gap: 16,

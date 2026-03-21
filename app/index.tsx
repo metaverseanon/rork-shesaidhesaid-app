@@ -370,13 +370,13 @@ export default function HomeScreen() {
     }
   };
 
-  const modes: { mode: AnalysisMode; icon: any; label: string; premium: boolean }[] = [
-    { mode: "normal", icon: null, label: t('modeNormal'), premium: false },
-    { mode: "savage", icon: Skull, label: t('modeSavage'), premium: false },
-    { mode: "lawyer", icon: Scale, label: t('modeLawyer'), premium: true },
-    { mode: "therapist", icon: Heart, label: t('modeTherapist'), premium: true },
-    { mode: "comedy", icon: Laugh, label: t('modeComedy'), premium: true },
-    { mode: "genz", icon: Smartphone, label: t('modeGenz'), premium: true },
+  const modes: { mode: AnalysisMode; icon: any; label: string; premium: boolean; desc: string }[] = [
+    { mode: "normal", icon: Scale, label: t('modeNormal'), premium: false, desc: "Fair & balanced" },
+    { mode: "savage", icon: Skull, label: t('modeSavage'), premium: false, desc: "No mercy roasts" },
+    { mode: "lawyer", icon: Scale, label: t('modeLawyer'), premium: true, desc: "Court-style ruling" },
+    { mode: "therapist", icon: Heart, label: t('modeTherapist'), premium: true, desc: "Emotional insight" },
+    { mode: "comedy", icon: Laugh, label: t('modeComedy'), premium: true, desc: "Stand-up bit" },
+    { mode: "genz", icon: Smartphone, label: t('modeGenz'), premium: true, desc: "No cap fr fr" },
   ];
 
   return (
@@ -529,7 +529,7 @@ export default function HomeScreen() {
 
               <View style={styles.modeSection}>
                 <Text style={[styles.modeSectionLabel, { color: accentColor }]}>{t('analysisMode')}</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.modeScrollContent}>
+                <View style={styles.modeGrid}>
                   {modes.map((m) => {
                     const isSelected = analysisMode === m.mode;
                     const config = MODE_CONFIG[m.mode];
@@ -538,31 +538,41 @@ export default function HomeScreen() {
                       <TouchableOpacity
                         key={m.mode}
                         style={[
-                          styles.modeChip,
-                          isSelected && { backgroundColor: config.bgColor, borderColor: config.color },
-                          isLocked && styles.modeChipLocked,
+                          styles.modeCard,
+                          isSelected && { backgroundColor: `${config.color}18`, borderColor: config.color, borderWidth: 1.5 },
+                          isLocked && styles.modeCardLocked,
                         ]}
                         onPress={() => selectMode(m.mode)}
                         activeOpacity={0.7}
                       >
-                        {m.icon ? (
-                          <m.icon color={isSelected ? config.color : "rgba(255,255,255,0.4)"} size={14} />
-                        ) : (
-                          <Text style={{ fontSize: 13 }}>{config.icon}</Text>
-                        )}
+                        <View style={[styles.modeCardIconWrap, isSelected && { backgroundColor: `${config.color}20` }]}>
+                          <m.icon color={isSelected ? config.color : "rgba(255,255,255,0.35)"} size={18} />
+                        </View>
                         <Text style={[
-                          styles.modeChipText,
+                          styles.modeCardLabel,
                           isSelected && { color: config.color },
                         ]}>
                           {m.label}
                         </Text>
+                        <Text style={[
+                          styles.modeCardDesc,
+                          isSelected && { color: `${config.color}99` },
+                        ]}>
+                          {m.desc}
+                        </Text>
                         {isLocked && (
-                          <Lock color="rgba(251, 191, 36, 0.6)" size={10} />
+                          <View style={styles.modeCardLockBadge}>
+                            <Lock color="#fbbf24" size={9} />
+                            <Text style={styles.modeCardLockText}>PRO</Text>
+                          </View>
+                        )}
+                        {isSelected && !isLocked && (
+                          <View style={[styles.modeCardActiveDot, { backgroundColor: config.color }]} />
                         )}
                       </TouchableOpacity>
                     );
                   })}
-                </ScrollView>
+                </View>
               </View>
 
               {scores.length >= 1 && (() => {
@@ -914,28 +924,73 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     textAlign: "center",
   },
-  modeScrollContent: {
-    paddingHorizontal: 4,
-    gap: 6,
+  modeGrid: {
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
+    gap: 8,
+    justifyContent: "space-between" as const,
   },
-  modeChip: {
+  modeCard: {
+    width: "31%" as const,
+    alignItems: "center" as const,
+    paddingVertical: 14,
+    paddingHorizontal: 6,
+    borderRadius: 14,
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.08)",
+    position: "relative" as const,
+  },
+  modeCardLocked: {
+    opacity: 0.65,
+  },
+  modeCardIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
+    marginBottom: 8,
+  },
+  modeCardLabel: {
+    fontSize: 12,
+    fontWeight: "700" as const,
+    color: "rgba(255, 255, 255, 0.6)",
+    textAlign: "center" as const,
+    marginBottom: 2,
+  },
+  modeCardDesc: {
+    fontSize: 9,
+    fontWeight: "500" as const,
+    color: "rgba(255, 255, 255, 0.3)",
+    textAlign: "center" as const,
+    lineHeight: 12,
+  },
+  modeCardLockBadge: {
+    position: "absolute" as const,
+    top: 6,
+    right: 6,
     flexDirection: "row" as const,
     alignItems: "center" as const,
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.06)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    gap: 2,
+    backgroundColor: "rgba(251, 191, 36, 0.15)",
+    borderRadius: 6,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
   },
-  modeChipLocked: {
-    opacity: 0.7,
+  modeCardLockText: {
+    fontSize: 7,
+    fontWeight: "800" as const,
+    color: "#fbbf24",
+    letterSpacing: 0.5,
   },
-  modeChipText: {
-    fontSize: 12,
-    fontWeight: "600" as const,
-    color: "rgba(255, 255, 255, 0.5)",
+  modeCardActiveDot: {
+    position: "absolute" as const,
+    bottom: 5,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
   },
   scanLimitBar: {
     flexDirection: "row" as const,
