@@ -1,3 +1,8 @@
+export type AnalysisMode = 'normal' | 'savage' | 'lawyer' | 'therapist' | 'comedy' | 'genz';
+
+export const PREMIUM_MODES: AnalysisMode[] = ['lawyer', 'therapist', 'comedy', 'genz'];
+export const FREE_MODES: AnalysisMode[] = ['normal', 'savage'];
+
 export interface AnalysisResult {
   winner: string;
   winnerReason: string;
@@ -15,6 +20,7 @@ export interface AnalysisResult {
   whoStartedIt: string;
   whoStartedReason: string;
   savageRoast?: string;
+  modeSpecificInsight?: string;
 }
 
 export interface HistoryEntry {
@@ -22,4 +28,5 @@ export interface HistoryEntry {
   date: string;
   analysis: AnalysisResult;
   savageMode: boolean;
+  analysisMode?: AnalysisMode;
 }

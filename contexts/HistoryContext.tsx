@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import createContextHook from "@nkzw/create-context-hook";
-import type { AnalysisResult, HistoryEntry } from "@/types/analysis";
+import type { AnalysisResult, HistoryEntry, AnalysisMode } from "@/types/analysis";
 
 const HISTORY_KEY = "argument_history";
 const MAX_HISTORY = 50;
@@ -27,13 +27,14 @@ export const [HistoryProvider, useHistory] = createContextHook(() => {
     }
   };
 
-  const addEntry = useCallback(async (analysis: AnalysisResult, savageMode: boolean) => {
+  const addEntry = useCallback(async (analysis: AnalysisResult, savageMode: boolean, analysisMode?: AnalysisMode) => {
     try {
       const entry: HistoryEntry = {
         id: Date.now().toString(),
         date: new Date().toISOString(),
         analysis,
         savageMode,
+        analysisMode,
       };
       const updated = [entry, ...history].slice(0, MAX_HISTORY);
       setHistory(updated);

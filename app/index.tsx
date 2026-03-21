@@ -17,7 +17,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { Upload, Globe, Medal, Pencil, ArrowLeftRight, Trash2, Flame, Clock, Skull } from "lucide-react-native";
+import { Upload, Globe, Medal, Pencil, ArrowLeftRight, Trash2, Clock, Skull, Crown, BarChart3, Scale, Heart, Laugh, Smartphone, Lock } from "lucide-react-native";
 import { useMutation } from "@tanstack/react-query";
 import { generateObject } from "@rork-ai/toolkit-sdk";
 import { z } from "zod";
@@ -25,12 +25,15 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Crypto from "expo-crypto";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { AnalysisResult } from "@/types/analysis";
+import type { AnalysisResult, AnalysisMode } from "@/types/analysis";
+import type { TranslationKey } from "@/constants/translations";
+import { PREMIUM_MODES } from "@/types/analysis";
 import { useScoreboard } from "@/contexts/ScoreboardContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useHistory } from "@/contexts/HistoryContext";
+import { usePremium } from "@/contexts/PremiumContext";
 
-const SAVAGE_MODE_KEY = "savage_mode";
+const ANALYSIS_MODE_KEY = "analysis_mode";
 
 const validationSchema = z.object({
   isValidChat: z.boolean().describe("Whether the image is a screenshot of a conversation/chat between people"),
@@ -78,36 +81,82 @@ const analysisSchema = z.object({
   whoStartedIt: z.string().describe("The name of the person who started/instigated the argument"),
   whoStartedReason: z.string().describe("Brief explanation of why this person is considered the instigator"),
   savageRoast: z.string().optional().describe("A brutal, funny roast of both participants and the argument itself. Only included when savage mode is on."),
+  modeSpecificInsight: z.string().optional().describe("A special insight based on the analysis mode (lawyer ruling, therapist advice, comedy bit, gen z summary). Always include this."),
 });
+
+const MODE_CONFIG: Record<AnalysisMode, { icon: string; color: string; bgColor: string }> = {
+  normal: { icon: "⚖️", color: "#a78bfa", bgColor: "rgba(167, 139, 250, 0.12)" },
+  savage: { icon: "💀", color: "#ef4444", bgColor: "rgba(239, 68, 68, 0.12)" },
+  lawyer: { icon: "⚖️", color: "#3b82f6", bgColor: "rgba(59, 130, 246, 0.12)" },
+  therapist: { icon: "💗", color: "#ec4899", bgColor: "rgba(236, 72, 153, 0.12)" },
+  comedy: { icon: "🎤", color: "#f59e0b", bgColor: "rgba(245, 158, 11, 0.12)" },
+  genz: { icon: "💀", color: "#10b981", bgColor: "rgba(16, 185, 129, 0.12)" },
+};
+
+function getModePrompt(mode: AnalysisMode): string {
+  switch (mode) {
+    case "savage":
+      return `\n\n🔥 SAVAGE MODE ACTIVATED 🔥\nBe BRUTALLY honest and hilariously savage in your analysis. Roast both participants mercilessly. Don't hold back. Use dark humor, sarcasm, and absolutely destroy them with your wit. The savageRoast field should be a 2-3 sentence absolutely devastating roast of the entire argument and both people involved. Make it so brutal they'll need therapy after reading it. Be creative, funny, and ruthless.\n\nFor modeSpecificInsight, write an extra savage one-liner summary.`;
+    case "lawyer":
+      return `\n\n⚖️ LAWYER MODE ⚖️\nAnalyze this argument as if you're a seasoned attorney presenting a case in court. Use formal legal language, reference logical fallacies as "objections", treat evidence as "exhibits", and deliver your verdict like a judge. Be thorough, precise, and authoritative. Reference precedent (made up is fine) and legal principles.\n\nFor modeSpecificInsight, write a formal legal ruling/opinion paragraph (2-3 sentences) as if this were an actual court case. Include "In the matter of [Person A] v. [Person B]..." format.\n\nLeave savageRoast empty.`;
+    case "therapist":
+      return `\n\n💗 THERAPIST MODE 💗\nAnalyze this argument from a relationship therapist's perspective. Focus on emotional dynamics, attachment styles, communication patterns, and underlying needs. Be empathetic and constructive. Identify what each person is really feeling beneath their words. Suggest healthier communication approaches.\n\nFor modeSpecificInsight, write personalized therapeutic advice (2-3 sentences) addressing the emotional dynamic and suggesting a specific communication technique both parties could use.\n\nLeave savageRoast empty.`;
+    case "comedy":
+      return `\n\n🎤 COMEDY MODE 🎤\nAnalyze this argument as if you're a stand-up comedian doing a bit about it on stage. Make it hilarious. Use comedic timing, callbacks, crowd work references, and build to a punchline. The analysis should read like a comedy set transcript. Be witty, not mean-spirited.\n\nFor modeSpecificInsight, write a 2-3 sentence comedy bit/joke about this specific argument, as if performing at a comedy club. Include a setup and punchline.\n\nLeave savageRoast empty.`;
+    case "genz":
+      return `\n\n💀 GEN Z MODE 💀\nAnalyze this argument using Gen Z slang, internet culture references, and meme language. Use terms like "no cap", "fr fr", "slay", "based", "L take", "W response", "main character energy", "giving", "ick", "red flag 🚩", "green flag", "understood the assignment", "rent free", "lowkey/highkey", "it's giving", "the vibe check", "ate and left no crumbs", etc. Make references to TikTok, stan culture, and internet memes. Be authentic to the voice.\n\nFor modeSpecificInsight, write a 2-3 sentence Gen Z summary using heavy slang, as if a Gen Z person is explaining this argument to their group chat.\n\nLeave savageRoast empty.`;
+    default:
+      return "\n\nBe humorous but fair in your analysis. Leave savageRoast empty. For modeSpecificInsight, write a brief balanced summary of the key takeaway from this argument.";
+  }
+}
+
+function getAnalyzingText(mode: AnalysisMode, t: (key: TranslationKey) => string): string {
+  switch (mode) {
+    case "savage": return t('analyzingSavage' as TranslationKey);
+    case "lawyer": return t('analyzingLawyer' as TranslationKey);
+    case "therapist": return t('analyzingTherapist' as TranslationKey);
+    case "comedy": return t('analyzingComedy' as TranslationKey);
+    case "genz": return t('analyzingGenz' as TranslationKey);
+    default: return t('analyzingArgument' as TranslationKey);
+  }
+}
+
+function getModeAccentColor(mode: AnalysisMode): string {
+  return MODE_CONFIG[mode].color;
+}
 
 export default function HomeScreen() {
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
-  const [savageMode, setSavageMode] = useState(false);
+  const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("normal");
   const { scores, renamePerson, addPerson, clearScoreboard, player1Color, player2Color, toggleColors } = useScoreboard();
   const { t, language, setLanguage } = useLanguage();
   const { addEntry, history } = useHistory();
+  const { isPremium, canScan, scansRemaining, incrementScanCount } = usePremium();
   const [editNameModal, setEditNameModal] = useState(false);
   const [editingName, setEditingName] = useState("");
   const [newNameInput, setNewNameInput] = useState("");
-  const [savageAnim] = useState(new Animated.Value(0));
+  const [modeAnim] = useState(new Animated.Value(0));
+
+  const isSavage = analysisMode === "savage";
+  const accentColor = getModeAccentColor(analysisMode);
 
   useEffect(() => {
     void checkConsent();
-    void loadSavageMode();
+    void loadAnalysisMode();
     void ImagePicker.requestMediaLibraryPermissionsAsync().then((result) => {
       console.log("Media library permission pre-requested:", result.status);
     });
   }, []);
 
   useEffect(() => {
-    Animated.timing(savageAnim, {
-      toValue: savageMode ? 1 : 0,
+    Animated.timing(modeAnim, {
+      toValue: isSavage ? 1 : 0,
       duration: 300,
       useNativeDriver: false,
     }).start();
-  }, [savageMode, savageAnim]);
+  }, [isSavage, modeAnim]);
 
   const checkConsent = async () => {
     const consent = await AsyncStorage.getItem("user_consent");
@@ -116,23 +165,27 @@ export default function HomeScreen() {
     }
   };
 
-  const loadSavageMode = async () => {
+  const loadAnalysisMode = async () => {
     try {
-      const stored = await AsyncStorage.getItem(SAVAGE_MODE_KEY);
-      if (stored === "true") {
-        setSavageMode(true);
+      const stored = await AsyncStorage.getItem(ANALYSIS_MODE_KEY);
+      if (stored) {
+        setAnalysisMode(stored as AnalysisMode);
       }
     } catch (error) {
-      console.error("Failed to load savage mode:", error);
+      console.error("Failed to load analysis mode:", error);
     }
   };
 
-  const toggleSavageMode = () => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    const newVal = !savageMode;
-    setSavageMode(newVal);
-    void AsyncStorage.setItem(SAVAGE_MODE_KEY, newVal ? "true" : "false").catch((error) => {
-      console.error("Failed to save savage mode:", error);
+  const selectMode = (mode: AnalysisMode) => {
+    if (PREMIUM_MODES.includes(mode) && !isPremium) {
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      router.push("/premium" as any);
+      return;
+    }
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setAnalysisMode(mode);
+    void AsyncStorage.setItem(ANALYSIS_MODE_KEY, mode).catch((error) => {
+      console.error("Failed to save analysis mode:", error);
     });
   };
 
@@ -143,7 +196,7 @@ export default function HomeScreen() {
 
   const analysisMutation = useMutation({
     mutationFn: async (imageUris: string[]) => {
-      console.log("Starting analysis for images:", imageUris.length, "savage:", savageMode);
+      console.log("Starting analysis for images:", imageUris.length, "mode:", analysisMode);
 
       const base64Images: string[] = [];
       for (const imageUri of imageUris) {
@@ -197,7 +250,7 @@ export default function HomeScreen() {
 
       const combinedHash = await Crypto.digestStringAsync(
         Crypto.CryptoDigestAlgorithm.SHA256,
-        base64Images.join("_") + (savageMode ? "_savage" : "_normal")
+        base64Images.join("_") + `_${analysisMode}`
       );
       console.log("Combined image hash:", combinedHash);
 
@@ -223,9 +276,7 @@ export default function HomeScreen() {
         ? `\n\nIMPORTANT: These ${base64Images.length} images are parts of the SAME conversation, in order. Analyze them together as one continuous conversation.`
         : "";
 
-      const savagePrompt = savageMode
-        ? `\n\n🔥 SAVAGE MODE ACTIVATED 🔥\nBe BRUTALLY honest and hilariously savage in your analysis. Roast both participants mercilessly. Don't hold back. Use dark humor, sarcasm, and absolutely destroy them with your wit. The savageRoast field should be a 2-3 sentence absolutely devastating roast of the entire argument and both people involved. Make it so brutal they'll need therapy after reading it. Be creative, funny, and ruthless.`
-        : "\n\nBe humorous but fair in your analysis. Leave savageRoast empty.";
+      const modePrompt = getModePrompt(analysisMode);
 
       console.log("No cache found, analyzing images...");
       const result = await generateObject({
@@ -236,7 +287,7 @@ export default function HomeScreen() {
               ...imageContentParts,
               {
                 type: "text",
-                text: `Analyze this argument/conversation screenshot. Determine who won the argument based on logical consistency, emotional stability, and communication effectiveness. Identify red flags, toxicity levels, and argument patterns.${savagePrompt}\n\nAlso determine WHO STARTED the argument - identify the instigator who escalated things first or brought up the conflict. Explain briefly why.\n\nIMPORTANT for naming the people:\n- The person whose messages appear on the RIGHT side (typically colored/blue/green bubbles) should be called 'You'\n- The person whose messages appear on the LEFT side (typically grey/white bubbles) is the other person\n- If you can see a contact name or profile name at the top of the chat, use that for the other person\n- If no name is visible, give the other person a funny descriptive nickname based on their personality in the conversation (e.g. Drama Queen, Captain Excuses, The Deflector, Mr. Always Right, etc.)\n- Use these names consistently for winner, faultPerson, whoStartedIt, and all references${multiImageNote}`,
+                text: `Analyze this argument/conversation screenshot. Determine who won the argument based on logical consistency, emotional stability, and communication effectiveness. Identify red flags, toxicity levels, and argument patterns.${modePrompt}\n\nAlso determine WHO STARTED the argument - identify the instigator who escalated things first or brought up the conflict. Explain briefly why.\n\nIMPORTANT for naming the people:\n- The person whose messages appear on the RIGHT side (typically colored/blue/green bubbles) should be called 'You'\n- The person whose messages appear on the LEFT side (typically grey/white bubbles) is the other person\n- If you can see a contact name or profile name at the top of the chat, use that for the other person\n- If no name is visible, give the other person a funny descriptive nickname based on their personality in the conversation (e.g. Drama Queen, Captain Excuses, The Deflector, Mr. Always Right, etc.)\n- Use these names consistently for winner, faultPerson, whoStartedIt, and all references${multiImageNote}`,
               },
             ],
           },
@@ -252,13 +303,15 @@ export default function HomeScreen() {
     },
     onSuccess: (data) => {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      void addEntry(data, savageMode);
+      void incrementScanCount();
+      void addEntry(data, isSavage, analysisMode);
       router.push({
         pathname: "/results" as any,
         params: {
           data: JSON.stringify(data),
           images: JSON.stringify(selectedImages),
-          savageMode: savageMode ? "true" : "false",
+          savageMode: isSavage ? "true" : "false",
+          analysisMode: analysisMode,
         },
       });
     },
@@ -285,6 +338,19 @@ export default function HomeScreen() {
   });
 
   const pickImage = async () => {
+    if (!canScan) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      Alert.alert(
+        t('scanLimitReached'),
+        t('scanLimitReachedDesc'),
+        [
+          { text: t('cancel'), style: "cancel" },
+          { text: t('upgradeToPremium'), onPress: () => router.push("/premium" as any) },
+        ]
+      );
+      return;
+    }
+
     console.log("Opening image picker - multiple selection, no cropping");
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -304,15 +370,14 @@ export default function HomeScreen() {
     }
   };
 
-  const savageBgColor = savageAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["rgba(167, 139, 250, 0.12)", "rgba(239, 68, 68, 0.2)"],
-  });
-
-  const savageBorderColor = savageAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["rgba(167, 139, 250, 0.25)", "rgba(239, 68, 68, 0.5)"],
-  });
+  const modes: { mode: AnalysisMode; icon: any; label: string; premium: boolean }[] = [
+    { mode: "normal", icon: null, label: t('modeNormal'), premium: false },
+    { mode: "savage", icon: Skull, label: t('modeSavage'), premium: false },
+    { mode: "lawyer", icon: Scale, label: t('modeLawyer'), premium: true },
+    { mode: "therapist", icon: Heart, label: t('modeTherapist'), premium: true },
+    { mode: "comedy", icon: Laugh, label: t('modeComedy'), premium: true },
+    { mode: "genz", icon: Smartphone, label: t('modeGenz'), premium: true },
+  ];
 
   return (
     <View style={styles.container}>
@@ -346,32 +411,49 @@ export default function HomeScreen() {
         </View>
       </Modal>
       <LinearGradient
-        colors={savageMode ? ["#1a0505", "#2e0a0a", "#3d1111"] : ["#0a0118", "#1a0f2e", "#2d1b4e"]}
+        colors={isSavage ? ["#1a0505", "#2e0a0a", "#3d1111"] : ["#0a0118", "#1a0f2e", "#2d1b4e"]}
         style={styles.gradient}
       >
         <SafeAreaView style={styles.safeArea}>
           <ScrollView contentContainerStyle={styles.contentScroll} bounces={true} showsVerticalScrollIndicator={false}>
           <View style={styles.content}>
             <View style={styles.topBar}>
-              {history.length > 0 ? (
+              <View style={styles.topBarLeft}>
+                {history.length > 0 && (
+                  <TouchableOpacity
+                    style={styles.historyButton}
+                    onPress={() => router.push("/history" as any)}
+                    activeOpacity={0.7}
+                  >
+                    <Clock color={accentColor} size={16} />
+                    <Text style={[styles.historyButtonText, { color: accentColor }]}>{t('argumentHistory')}</Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity
-                  style={styles.historyButton}
-                  onPress={() => router.push("/history" as any)}
+                  style={[styles.insightsButton, isPremium && styles.insightsButtonPremium]}
+                  onPress={() => router.push("/insights" as any)}
                   activeOpacity={0.7}
                 >
-                  <Clock color={savageMode ? "#f87171" : "#a78bfa"} size={18} />
-                  <Text style={[styles.historyButtonText, savageMode && { color: "#f87171" }]}>{t('argumentHistory')}</Text>
+                  <BarChart3 color={isPremium ? "#fbbf24" : "rgba(255,255,255,0.4)"} size={16} />
                 </TouchableOpacity>
-              ) : (
-                <View />
-              )}
-              <TouchableOpacity
-                style={styles.languageToggle}
-                onPress={() => setShowLanguageModal(true)}
-                activeOpacity={0.7}
-              >
-                <Globe color={savageMode ? "#f87171" : "#a78bfa"} size={20} />
-              </TouchableOpacity>
+              </View>
+              <View style={styles.topBarRight}>
+                <TouchableOpacity
+                  style={[styles.premiumButton, isPremium && styles.premiumButtonActive]}
+                  onPress={() => router.push("/premium" as any)}
+                  activeOpacity={0.7}
+                >
+                  <Crown color={isPremium ? "#fbbf24" : "rgba(251, 191, 36, 0.7)"} size={16} />
+                  {isPremium && <Text style={styles.premiumButtonText}>PRO</Text>}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.languageToggle}
+                  onPress={() => setShowLanguageModal(true)}
+                  activeOpacity={0.7}
+                >
+                  <Globe color={accentColor} size={18} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <Modal
@@ -437,7 +519,7 @@ export default function HomeScreen() {
                   contentFit="contain"
                 />
               </View>
-              <Text style={[styles.appSubtitle, savageMode && { color: "#ef4444" }]}>{t('appSubtitle')}</Text>
+              <Text style={[styles.appSubtitle, { color: accentColor }]}>{t('appSubtitle')}</Text>
               <Text style={styles.subtitle}>
                 {t('subtitle')}
               </Text>
@@ -445,32 +527,43 @@ export default function HomeScreen() {
                 {t('disclaimer')}
               </Text>
 
-              <Animated.View style={[styles.savageModeCard, { backgroundColor: savageBgColor, borderColor: savageBorderColor }]}>
-                <TouchableOpacity
-                  style={styles.savageModeInner}
-                  onPress={toggleSavageMode}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.savageModeLeft}>
-                    {savageMode ? (
-                      <Skull color="#ef4444" size={22} />
-                    ) : (
-                      <Flame color="#a78bfa" size={22} />
-                    )}
-                    <View>
-                      <Text style={[styles.savageModeTitle, savageMode && { color: "#ef4444" }]}>
-                        {t('savageMode')}
-                      </Text>
-                      <Text style={styles.savageModeDesc}>
-                        {savageMode ? t('savageModeDesc') : t('normalModeDesc')}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={[styles.savageToggle, savageMode && styles.savageToggleOn]}>
-                    <View style={[styles.savageToggleDot, savageMode && styles.savageToggleDotOn]} />
-                  </View>
-                </TouchableOpacity>
-              </Animated.View>
+              <View style={styles.modeSection}>
+                <Text style={[styles.modeSectionLabel, { color: accentColor }]}>{t('analysisMode')}</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.modeScrollContent}>
+                  {modes.map((m) => {
+                    const isSelected = analysisMode === m.mode;
+                    const config = MODE_CONFIG[m.mode];
+                    const isLocked = m.premium && !isPremium;
+                    return (
+                      <TouchableOpacity
+                        key={m.mode}
+                        style={[
+                          styles.modeChip,
+                          isSelected && { backgroundColor: config.bgColor, borderColor: config.color },
+                          isLocked && styles.modeChipLocked,
+                        ]}
+                        onPress={() => selectMode(m.mode)}
+                        activeOpacity={0.7}
+                      >
+                        {m.icon ? (
+                          <m.icon color={isSelected ? config.color : "rgba(255,255,255,0.4)"} size={14} />
+                        ) : (
+                          <Text style={{ fontSize: 13 }}>{config.icon}</Text>
+                        )}
+                        <Text style={[
+                          styles.modeChipText,
+                          isSelected && { color: config.color },
+                        ]}>
+                          {m.label}
+                        </Text>
+                        {isLocked && (
+                          <Lock color="rgba(251, 191, 36, 0.6)" size={10} />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
 
               {scores.length >= 1 && (() => {
                 const player1 = scores[0];
@@ -636,15 +729,33 @@ export default function HomeScreen() {
 
             {analysisMutation.isPending ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={savageMode ? "#ef4444" : "#a78bfa"} />
-                <Text style={[styles.loadingText, savageMode && { color: "#ef4444" }]}>
-                  {savageMode ? t('analyzingSavage') : t('analyzingArgument')}
+                <ActivityIndicator size="large" color={accentColor} />
+                <Text style={[styles.loadingText, { color: accentColor }]}>
+                  {getAnalyzingText(analysisMode, t)}
                 </Text>
               </View>
             ) : (
               <View style={styles.uploadSection}>
+                {!isPremium && (
+                  <View style={styles.scanLimitBar}>
+                    <Text style={styles.scanLimitText}>
+                      {scansRemaining} {t('scansRemaining')}
+                    </Text>
+                    <View style={styles.scanLimitDots}>
+                      {Array.from({ length: 3 }).map((_, i) => (
+                        <View
+                          key={i}
+                          style={[
+                            styles.scanDot,
+                            i < scansRemaining ? styles.scanDotActive : styles.scanDotUsed,
+                          ]}
+                        />
+                      ))}
+                    </View>
+                  </View>
+                )}
                 <TouchableOpacity
-                  style={[styles.uploadButton, savageMode && { backgroundColor: "#dc2626" }]}
+                  style={[styles.uploadButton, { backgroundColor: accentColor }]}
                   onPress={pickImage}
                   activeOpacity={0.8}
                 >
@@ -698,20 +809,66 @@ const styles = StyleSheet.create({
     alignItems: "center" as const,
     marginTop: 8,
   },
+  topBarLeft: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+  },
+  topBarRight: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+  },
   historyButton: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
-    gap: 6,
-    padding: 10,
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     backgroundColor: "rgba(167, 139, 250, 0.15)",
-    borderRadius: 20,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: "rgba(167, 139, 250, 0.3)",
   },
   historyButtonText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "600" as const,
     color: "#a78bfa",
+  },
+  insightsButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+  },
+  insightsButtonPremium: {
+    backgroundColor: "rgba(251, 191, 36, 0.1)",
+    borderColor: "rgba(251, 191, 36, 0.25)",
+  },
+  premiumButton: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: "rgba(251, 191, 36, 0.08)",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(251, 191, 36, 0.2)",
+  },
+  premiumButtonActive: {
+    backgroundColor: "rgba(251, 191, 36, 0.15)",
+    borderColor: "rgba(251, 191, 36, 0.4)",
+  },
+  premiumButtonText: {
+    fontSize: 11,
+    fontWeight: "800" as const,
+    color: "#fbbf24",
+    letterSpacing: 1,
   },
   header: {
     alignItems: "center",
@@ -719,20 +876,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   logoContainer: {
-    width: 180,
-    height: 180,
+    width: 160,
+    height: 160,
     marginBottom: 8,
   },
   logo: {
     width: "100%",
     height: "100%",
-  },
-  title: {
-    fontSize: 36,
-    fontWeight: "700" as const,
-    color: "#ffffff",
-    marginBottom: 8,
-    letterSpacing: -0.5,
   },
   appSubtitle: {
     fontSize: 18,
@@ -753,58 +903,72 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontStyle: "italic" as const,
   },
-  savageModeCard: {
-    marginTop: 16,
-    borderRadius: 14,
-    borderWidth: 1.5,
+  modeSection: {
     width: "100%",
-    overflow: "hidden" as const,
+    marginTop: 18,
+    gap: 10,
   },
-  savageModeInner: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    justifyContent: "space-between" as const,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  savageModeLeft: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 12,
-  },
-  savageModeTitle: {
-    fontSize: 15,
-    fontWeight: "700" as const,
-    color: "#a78bfa",
-  },
-  savageModeDesc: {
+  modeSectionLabel: {
     fontSize: 11,
-    color: "rgba(255, 255, 255, 0.45)",
-    marginTop: 1,
+    fontWeight: "700" as const,
+    letterSpacing: 1.5,
+    textAlign: "center",
   },
-  savageToggle: {
-    width: 48,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
+  modeScrollContent: {
+    paddingHorizontal: 4,
+    gap: 6,
+  },
+  modeChip: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+  },
+  modeChipLocked: {
+    opacity: 0.7,
+  },
+  modeChipText: {
+    fontSize: 12,
+    fontWeight: "600" as const,
+    color: "rgba(255, 255, 255, 0.5)",
+  },
+  scanLimitBar: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     justifyContent: "center" as const,
-    paddingHorizontal: 3,
+    gap: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    borderRadius: 12,
   },
-  savageToggleOn: {
-    backgroundColor: "rgba(239, 68, 68, 0.6)",
+  scanLimitText: {
+    fontSize: 12,
+    fontWeight: "600" as const,
+    color: "rgba(255, 255, 255, 0.45)",
   },
-  savageToggleDot: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: "rgba(255, 255, 255, 0.7)",
+  scanLimitDots: {
+    flexDirection: "row" as const,
+    gap: 5,
   },
-  savageToggleDotOn: {
-    alignSelf: "flex-end" as const,
-    backgroundColor: "#ffffff",
+  scanDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  scanDotActive: {
+    backgroundColor: "#10b981",
+  },
+  scanDotUsed: {
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
   },
   uploadSection: {
-    gap: 16,
+    gap: 12,
   },
   uploadButton: {
     borderRadius: 16,
@@ -1161,9 +1325,12 @@ const styles = StyleSheet.create({
     color: "#ffffff",
   },
   languageToggle: {
-    padding: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: "rgba(167, 139, 250, 0.15)",
-    borderRadius: 20,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     borderWidth: 1,
     borderColor: "rgba(167, 139, 250, 0.3)",
   },

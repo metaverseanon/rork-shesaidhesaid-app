@@ -27,6 +27,11 @@ import {
   Skull,
   Target,
   Copy,
+  Scale,
+  Heart,
+  Laugh,
+  Smartphone,
+  Lightbulb,
 } from "lucide-react-native";
 import type { AnalysisResult } from "@/types/analysis";
 import { useEffect, useRef, useState, useCallback } from "react";
@@ -35,7 +40,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import * as Clipboard from "expo-clipboard";
 
 export default function ResultsScreen() {
-  const params = useLocalSearchParams<{ data: string; images: string; savageMode: string }>();
+  const params = useLocalSearchParams<{ data: string; images: string; savageMode: string; analysisMode: string }>();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const { addWin } = useScoreboard();
@@ -43,6 +48,7 @@ export default function ResultsScreen() {
   const [showShareModal, setShowShareModal] = useState(false);
   const { t } = useLanguage();
   const isSavage = params.savageMode === "true";
+  const currentMode = (params.analysisMode || (isSavage ? "savage" : "normal")) as string;
 
   let analysis: AnalysisResult | null = null;
   
@@ -197,6 +203,22 @@ export default function ResultsScreen() {
                     <Flame color="#f59e0b" size={16} />
                   </View>
                   <Text style={styles.savageRoastText}>{analysis.savageRoast}</Text>
+                </View>
+              ) : null}
+
+              {analysis.modeSpecificInsight && currentMode !== "normal" && currentMode !== "savage" ? (
+                <View style={styles.modeInsightCard}>
+                  <View style={styles.modeInsightHeader}>
+                    {currentMode === "lawyer" && <Scale color="#3b82f6" size={18} />}
+                    {currentMode === "therapist" && <Heart color="#ec4899" size={18} />}
+                    {currentMode === "comedy" && <Laugh color="#f59e0b" size={18} />}
+                    {currentMode === "genz" && <Smartphone color="#10b981" size={18} />}
+                    {!['lawyer','therapist','comedy','genz'].includes(currentMode) && <Lightbulb color="#a78bfa" size={18} />}
+                    <Text style={[styles.modeInsightLabel, {
+                      color: currentMode === "lawyer" ? "#3b82f6" : currentMode === "therapist" ? "#ec4899" : currentMode === "comedy" ? "#f59e0b" : currentMode === "genz" ? "#10b981" : "#a78bfa"
+                    }]}>{t('modeInsight')}</Text>
+                  </View>
+                  <Text style={styles.modeInsightText}>{analysis.modeSpecificInsight}</Text>
                 </View>
               ) : null}
 
@@ -840,6 +862,31 @@ const styles = StyleSheet.create({
   shareableCardFooterText: {
     fontSize: 10,
     color: "rgba(255, 255, 255, 0.3)",
+  },
+  modeInsightCard: {
+    backgroundColor: "rgba(30, 20, 60, 0.5)",
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: "rgba(167, 139, 250, 0.2)",
+    padding: 20,
+  },
+  modeInsightHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    marginBottom: 12,
+  },
+  modeInsightLabel: {
+    fontSize: 12,
+    fontWeight: "800" as const,
+    color: "#a78bfa",
+    letterSpacing: 1.5,
+    flex: 1,
+  },
+  modeInsightText: {
+    fontSize: 15,
+    color: "rgba(255, 255, 255, 0.85)",
+    lineHeight: 23,
   },
   shareButton: {
     borderRadius: 16,
