@@ -118,7 +118,7 @@ export default function PremiumScreen() {
                   <Zap color="#fbbf24" size={14} />
                   <Text style={styles.pricingBadgeText}>{t('bestValue')}</Text>
                 </View>
-                <Text style={styles.pricingAmount}>$4.99</Text>
+                <Text style={styles.pricingAmount}>$4.99<Text style={styles.pricingPerMonth}>/mo</Text></Text>
                 <Text style={styles.pricingPeriod}>{t('lifetime')}</Text>
                 <Text style={styles.pricingNote}>{t('oneTimePurchase')}</Text>
               </View>
@@ -298,6 +298,11 @@ const styles = StyleSheet.create({
     fontWeight: "800" as const,
     color: "#fbbf24",
     marginBottom: 4,
+  },
+  pricingPerMonth: {
+    fontSize: 20,
+    fontWeight: "600" as const,
+    color: "rgba(251, 191, 36, 0.7)",
   },
   pricingPeriod: {
     fontSize: 16,
