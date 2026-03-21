@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -24,9 +25,12 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { usePremium } from "@/contexts/PremiumContext";
 import * as Haptics from "expo-haptics";
 
+type PlanType = 'monthly' | 'yearly';
+
 export default function PremiumScreen() {
   const { t } = useLanguage();
   const { isPremium, activatePremium } = usePremium();
+  const [selectedPlan, setSelectedPlan] = useState<PlanType>('yearly');
 
   const handlePurchase = () => {
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -113,15 +117,116 @@ export default function PremiumScreen() {
             </View>
 
             <View style={styles.pricingSection}>
-              <View style={styles.pricingCard}>
-                <View style={styles.pricingBadge}>
-                  <Zap color="#fbbf24" size={14} />
-                  <Text style={styles.pricingBadgeText}>{t('bestValue')}</Text>
-                </View>
-                <Text style={styles.pricingAmount}>$4.99<Text style={styles.pricingPerMonth}>/mo</Text></Text>
-                <Text style={styles.pricingPeriod}>{t('lifetime')}</Text>
-                <Text style={styles.pricingNote}>{t('oneTimePurchase')}</Text>
+              <View style={styles.planToggle}>
+                <TouchableOpacity
+                  style={[
+                    styles.planToggleButton,
+                    selectedPlan === 'monthly' && styles.planToggleButtonActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedPlan('monthly');
+                    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.planToggleText,
+                      selectedPlan === 'monthly' && styles.planToggleTextActive,
+                    ]}
+                  >
+                    {t('monthly')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.planToggleButton,
+                    selectedPlan === 'yearly' && styles.planToggleButtonActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedPlan('yearly');
+                    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.planToggleText,
+                      selectedPlan === 'yearly' && styles.planToggleTextActive,
+                    ]}
+                  >
+                    {t('yearly')}
+                  </Text>
+                  <View style={styles.saveBadge}>
+                    <Text style={styles.saveBadgeText}>{t('yearlySave')}</Text>
+                  </View>
+                </TouchableOpacity>
               </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.pricingCard,
+                  selectedPlan === 'monthly' && styles.pricingCardSelected,
+                ]}
+                onPress={() => {
+                  setSelectedPlan('monthly');
+                  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
+                activeOpacity={0.8}
+              >
+                <View style={styles.pricingCardRow}>
+                  <View style={styles.pricingCardLeft}>
+                    <View style={[
+                      styles.radioOuter,
+                      selectedPlan === 'monthly' && styles.radioOuterActive,
+                    ]}>
+                      {selectedPlan === 'monthly' && <View style={styles.radioInner} />}
+                    </View>
+                    <View>
+                      <Text style={styles.planName}>{t('lifetime')}</Text>
+                      <Text style={styles.planNote}>{t('oneTimePurchase')}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.planPrice}>$4.99<Text style={styles.planPriceSub}>{t('perMonth')}</Text></Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.pricingCard,
+                  selectedPlan === 'yearly' && styles.pricingCardSelected,
+                ]}
+                onPress={() => {
+                  setSelectedPlan('yearly');
+                  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
+                activeOpacity={0.8}
+              >
+                {selectedPlan === 'yearly' && (
+                  <View style={styles.bestValueBadge}>
+                    <Zap color="#0a0118" size={12} />
+                    <Text style={styles.bestValueText}>{t('bestValue')}</Text>
+                  </View>
+                )}
+                <View style={styles.pricingCardRow}>
+                  <View style={styles.pricingCardLeft}>
+                    <View style={[
+                      styles.radioOuter,
+                      selectedPlan === 'yearly' && styles.radioOuterActive,
+                    ]}>
+                      {selectedPlan === 'yearly' && <View style={styles.radioInner} />}
+                    </View>
+                    <View>
+                      <Text style={styles.planName}>{t('yearlyPlan')}</Text>
+                      <Text style={styles.planNote}>{t('yearlyNote')}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.yearlyPriceContainer}>
+                    <Text style={styles.planPriceStrike}>$59.88</Text>
+                    <Text style={styles.planPrice}>$29.99<Text style={styles.planPriceSub}>{t('perYear')}</Text></Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
             </View>
 
             {isPremium ? (
@@ -268,51 +373,136 @@ const styles = StyleSheet.create({
   },
   pricingSection: {
     marginBottom: 24,
+    gap: 10,
+  },
+  planToggle: {
+    flexDirection: "row" as const,
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
+    borderRadius: 14,
+    padding: 4,
+    marginBottom: 6,
+  },
+  planToggleButton: {
+    flex: 1,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    paddingVertical: 12,
+    borderRadius: 11,
+    gap: 6,
+  },
+  planToggleButtonActive: {
+    backgroundColor: "rgba(251, 191, 36, 0.15)",
+  },
+  planToggleText: {
+    fontSize: 14,
+    fontWeight: "600" as const,
+    color: "rgba(255, 255, 255, 0.4)",
+  },
+  planToggleTextActive: {
+    color: "#fbbf24",
+  },
+  saveBadge: {
+    backgroundColor: "#fbbf24",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  saveBadgeText: {
+    fontSize: 10,
+    fontWeight: "800" as const,
+    color: "#0a0118",
+    letterSpacing: 0.5,
   },
   pricingCard: {
-    backgroundColor: "rgba(251, 191, 36, 0.08)",
-    borderRadius: 20,
+    backgroundColor: "rgba(251, 191, 36, 0.05)",
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: "rgba(251, 191, 36, 0.12)",
+    padding: 18,
+    position: "relative" as const,
+    overflow: "hidden" as const,
+  },
+  pricingCardSelected: {
+    borderColor: "#fbbf24",
+    backgroundColor: "rgba(251, 191, 36, 0.1)",
+  },
+  pricingCardRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+  },
+  pricingCardLeft: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 14,
+  },
+  radioOuter: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     borderWidth: 2,
-    borderColor: "rgba(251, 191, 36, 0.3)",
-    padding: 28,
-    alignItems: "center",
+    borderColor: "rgba(255, 255, 255, 0.2)",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
-  pricingBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "rgba(251, 191, 36, 0.15)",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginBottom: 16,
+  radioOuterActive: {
+    borderColor: "#fbbf24",
   },
-  pricingBadgeText: {
+  radioInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "#fbbf24",
+  },
+  planName: {
+    fontSize: 15,
+    fontWeight: "700" as const,
+    color: "#ffffff",
+    marginBottom: 2,
+  },
+  planNote: {
     fontSize: 12,
-    fontWeight: "800" as const,
-    color: "#fbbf24",
-    letterSpacing: 1,
+    color: "rgba(255, 255, 255, 0.45)",
   },
-  pricingAmount: {
-    fontSize: 48,
-    fontWeight: "800" as const,
-    color: "#fbbf24",
-    marginBottom: 4,
-  },
-  pricingPerMonth: {
+  planPrice: {
     fontSize: 20,
-    fontWeight: "600" as const,
-    color: "rgba(251, 191, 36, 0.7)",
+    fontWeight: "800" as const,
+    color: "#fbbf24",
   },
-  pricingPeriod: {
-    fontSize: 16,
-    fontWeight: "600" as const,
-    color: "rgba(255, 255, 255, 0.7)",
-    marginBottom: 8,
-  },
-  pricingNote: {
+  planPriceSub: {
     fontSize: 13,
-    color: "rgba(255, 255, 255, 0.4)",
+    fontWeight: "600" as const,
+    color: "rgba(251, 191, 36, 0.6)",
+  },
+  planPriceStrike: {
+    fontSize: 13,
+    fontWeight: "500" as const,
+    color: "rgba(255, 255, 255, 0.3)",
+    textDecorationLine: "line-through" as const,
+    textAlign: "right" as const,
+    marginBottom: 2,
+  },
+  yearlyPriceContainer: {
+    alignItems: "flex-end" as const,
+  },
+  bestValueBadge: {
+    position: "absolute" as const,
+    top: 0,
+    right: 0,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 4,
+    backgroundColor: "#fbbf24",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderBottomLeftRadius: 10,
+  },
+  bestValueText: {
+    fontSize: 10,
+    fontWeight: "800" as const,
+    color: "#0a0118",
+    letterSpacing: 0.5,
   },
   activeBadge: {
     flexDirection: "row",
