@@ -84,13 +84,13 @@ const analysisSchema = z.object({
   modeSpecificInsight: z.string().optional().describe("A special insight based on the analysis mode (lawyer ruling, therapist advice, comedy bit, gen z summary). Always include this."),
 });
 
-const MODE_CONFIG: Record<AnalysisMode, { icon: string; color: string; bgColor: string }> = {
-  normal: { icon: "⚖️", color: "#a78bfa", bgColor: "rgba(167, 139, 250, 0.12)" },
-  savage: { icon: "💀", color: "#ef4444", bgColor: "rgba(239, 68, 68, 0.12)" },
-  lawyer: { icon: "⚖️", color: "#3b82f6", bgColor: "rgba(59, 130, 246, 0.12)" },
-  therapist: { icon: "💗", color: "#ec4899", bgColor: "rgba(236, 72, 153, 0.12)" },
-  comedy: { icon: "🎤", color: "#f59e0b", bgColor: "rgba(245, 158, 11, 0.12)" },
-  genz: { icon: "💀", color: "#10b981", bgColor: "rgba(16, 185, 129, 0.12)" },
+const MODE_CONFIG: Record<AnalysisMode, { icon: string; color: string; bgColor: string; gradient: [string, string, string] }> = {
+  normal: { icon: "⚖️", color: "#a78bfa", bgColor: "rgba(167, 139, 250, 0.12)", gradient: ["#0a0118", "#1a0f2e", "#2d1b4e"] },
+  savage: { icon: "💀", color: "#ef4444", bgColor: "rgba(239, 68, 68, 0.12)", gradient: ["#1a0505", "#2e0a0a", "#3d1111"] },
+  lawyer: { icon: "⚖️", color: "#3b82f6", bgColor: "rgba(59, 130, 246, 0.12)", gradient: ["#020a1a", "#0a1a33", "#112d5a"] },
+  therapist: { icon: "💗", color: "#ec4899", bgColor: "rgba(236, 72, 153, 0.12)", gradient: ["#1a0511", "#2e0a1e", "#3d112d"] },
+  comedy: { icon: "🎤", color: "#f59e0b", bgColor: "rgba(245, 158, 11, 0.12)", gradient: ["#1a1005", "#2e1e0a", "#3d2b11"] },
+  genz: { icon: "💀", color: "#10b981", bgColor: "rgba(16, 185, 129, 0.12)", gradient: ["#021a12", "#0a2e1e", "#113d2b"] },
 };
 
 function getModePrompt(mode: AnalysisMode): string {
@@ -411,7 +411,7 @@ export default function HomeScreen() {
         </View>
       </Modal>
       <LinearGradient
-        colors={isSavage ? ["#1a0505", "#2e0a0a", "#3d1111"] : ["#0a0118", "#1a0f2e", "#2d1b4e"]}
+        colors={MODE_CONFIG[analysisMode].gradient}
         style={styles.gradient}
       >
         <SafeAreaView style={styles.safeArea}>
