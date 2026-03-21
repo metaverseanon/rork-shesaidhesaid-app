@@ -17,7 +17,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { Upload, Globe, Medal, Pencil, ArrowLeftRight, Trash2, Clock, Skull, Crown, BarChart3, Scale, Heart, Laugh, Smartphone, Lock } from "lucide-react-native";
+import { Upload, Globe, Medal, Pencil, ArrowLeftRight, Trash2, Clock, Skull, Crown, BarChart3, Scale, Heart, Laugh, Smartphone, Lock, Shield } from "lucide-react-native";
 import { useMutation } from "@tanstack/react-query";
 import { generateObject } from "@rork-ai/toolkit-sdk";
 import { z } from "zod";
@@ -371,7 +371,7 @@ export default function HomeScreen() {
   };
 
   const modes: { mode: AnalysisMode; icon: any; label: string; premium: boolean; desc: string }[] = [
-    { mode: "normal", icon: Scale, label: t('modeNormal'), premium: false, desc: "Fair & balanced" },
+    { mode: "normal", icon: Shield, label: t('modeNormal'), premium: false, desc: "Fair & balanced" },
     { mode: "savage", icon: Skull, label: t('modeSavage'), premium: false, desc: "No mercy roasts" },
     { mode: "lawyer", icon: Scale, label: t('modeLawyer'), premium: true, desc: "Court-style ruling" },
     { mode: "therapist", icon: Heart, label: t('modeTherapist'), premium: true, desc: "Emotional insight" },
