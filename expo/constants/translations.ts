@@ -163,6 +163,9 @@ export const translations = {
     analyzingComedy: 'Writing the bit... 🎤',
     analyzingGenz: 'No cap analyzing... 💀',
     modeInsight: 'MODE INSIGHT',
+    monthlySubscription: '$4.99/month, cancel anytime',
+    processing: 'Processing...',
+    restoring: 'Restoring...',
   },
   es: {
     appSubtitle: 'Juez de Argumentos',
@@ -321,6 +324,9 @@ export const translations = {
     analyzingComedy: 'Escribiendo el chiste... 🎤',
     analyzingGenz: 'Analizando sin cap... 💀',
     modeInsight: 'INSIGHT DEL MODO',
+    monthlySubscription: '$4.99/mes, cancela cuando quieras',
+    processing: 'Procesando...',
+    restoring: 'Restaurando...',
   },
   de: {
     appSubtitle: 'Argument-Richter',
@@ -479,6 +485,9 @@ export const translations = {
     analyzingComedy: 'Witz wird geschrieben... 🎤',
     analyzingGenz: 'No cap Analyse... 💀',
     modeInsight: 'MODUS-EINBLICK',
+    monthlySubscription: '$4.99/Monat, jederzeit kündbar',
+    processing: 'Verarbeitung...',
+    restoring: 'Wiederherstellen...',
   },
 };
 

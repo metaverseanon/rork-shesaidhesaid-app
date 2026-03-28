@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -25,40 +26,51 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { usePremium } from "@/contexts/PremiumContext";
 import * as Haptics from "expo-haptics";
 
-type PlanType = 'monthly' | 'yearly';
+type PlanType = "monthly" | "yearly";
 
 export default function PremiumScreen() {
   const { t } = useLanguage();
-  const { isPremium, activatePremium } = usePremium();
-  const [selectedPlan, setSelectedPlan] = useState<PlanType>('yearly');
+  const {
+    isPremium,
+    monthlyPackage,
+    annualPackage,
+    purchasePackage,
+    restorePurchases,
+    isPurchasing,
+    isRestoring,
+    isLoading,
+  } = usePremium();
+  const [selectedPlan, setSelectedPlan] = useState<PlanType>("yearly");
 
   const handlePurchase = () => {
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    void activatePremium();
-    Alert.alert("🎉", t('premiumActivated'), [
-      { text: "OK", onPress: () => router.back() },
-    ]);
+    const pkg = selectedPlan === "monthly" ? monthlyPackage : annualPackage;
+    if (!pkg) {
+      Alert.alert(t("error"), "This plan is not available right now. Please try again later.");
+      return;
+    }
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    purchasePackage(pkg);
   };
 
   const handleRestore = () => {
-    if (isPremium) {
-      Alert.alert("✅", t('premiumAlreadyActive'));
-    } else {
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      void activatePremium();
-      Alert.alert("🎉", t('premiumRestored'), [
-        { text: "OK", onPress: () => router.back() },
-      ]);
-    }
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    restorePurchases();
   };
 
+  const monthlyPrice = monthlyPackage?.product?.priceString ?? "$4.99";
+  const yearlyPrice = annualPackage?.product?.priceString ?? "$29.99";
+
   const features = [
-    { icon: Zap, label: t('unlimitedScans'), desc: t('unlimitedScansDesc') },
-    { icon: Scale, label: t('lawyerMode'), desc: t('lawyerModeDesc') },
-    { icon: Heart, label: t('therapistMode'), desc: t('therapistModeDesc') },
-    { icon: Laugh, label: t('comedyMode'), desc: t('comedyModeDesc') },
-    { icon: Smartphone, label: t('genzMode'), desc: t('genzModeDesc') },
-    { icon: BarChart3, label: t('relationshipInsights'), desc: t('relationshipInsightsDesc') },
+    { icon: Zap, label: t("unlimitedScans"), desc: t("unlimitedScansDesc") },
+    { icon: Scale, label: t("lawyerMode"), desc: t("lawyerModeDesc") },
+    { icon: Heart, label: t("therapistMode"), desc: t("therapistModeDesc") },
+    { icon: Laugh, label: t("comedyMode"), desc: t("comedyModeDesc") },
+    { icon: Smartphone, label: t("genzMode"), desc: t("genzModeDesc") },
+    {
+      icon: BarChart3,
+      label: t("relationshipInsights"),
+      desc: t("relationshipInsightsDesc"),
+    },
   ];
 
   return (
@@ -76,7 +88,7 @@ export default function PremiumScreen() {
             >
               <ArrowLeft color="#fbbf24" size={24} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>{t('premium')}</Text>
+            <Text style={styles.headerTitle}>{t("premium")}</Text>
             <View style={styles.backButton} />
           </View>
 
@@ -94,8 +106,8 @@ export default function PremiumScreen() {
                   <Crown color="#ffffff" size={40} />
                 </LinearGradient>
               </View>
-              <Text style={styles.heroTitle}>{t('unlockPremium')}</Text>
-              <Text style={styles.heroSubtitle}>{t('premiumSubtitle')}</Text>
+              <Text style={styles.heroTitle}>{t("unlockPremium")}</Text>
+              <Text style={styles.heroSubtitle}>{t("premiumSubtitle")}</Text>
             </View>
 
             <View style={styles.featuresSection}>
@@ -121,10 +133,10 @@ export default function PremiumScreen() {
                 <TouchableOpacity
                   style={[
                     styles.planToggleButton,
-                    selectedPlan === 'monthly' && styles.planToggleButtonActive,
+                    selectedPlan === "monthly" && styles.planToggleButtonActive,
                   ]}
                   onPress={() => {
-                    setSelectedPlan('monthly');
+                    setSelectedPlan("monthly");
                     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   }}
                   activeOpacity={0.7}
@@ -132,19 +144,19 @@ export default function PremiumScreen() {
                   <Text
                     style={[
                       styles.planToggleText,
-                      selectedPlan === 'monthly' && styles.planToggleTextActive,
+                      selectedPlan === "monthly" && styles.planToggleTextActive,
                     ]}
                   >
-                    {t('monthly')}
+                    {t("monthly")}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[
                     styles.planToggleButton,
-                    selectedPlan === 'yearly' && styles.planToggleButtonActive,
+                    selectedPlan === "yearly" && styles.planToggleButtonActive,
                   ]}
                   onPress={() => {
-                    setSelectedPlan('yearly');
+                    setSelectedPlan("yearly");
                     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   }}
                   activeOpacity={0.7}
@@ -152,13 +164,13 @@ export default function PremiumScreen() {
                   <Text
                     style={[
                       styles.planToggleText,
-                      selectedPlan === 'yearly' && styles.planToggleTextActive,
+                      selectedPlan === "yearly" && styles.planToggleTextActive,
                     ]}
                   >
-                    {t('yearly')}
+                    {t("yearly")}
                   </Text>
                   <View style={styles.saveBadge}>
-                    <Text style={styles.saveBadgeText}>{t('yearlySave')}</Text>
+                    <Text style={styles.saveBadgeText}>{t("yearlySave")}</Text>
                   </View>
                 </TouchableOpacity>
               </View>
@@ -166,64 +178,80 @@ export default function PremiumScreen() {
               <TouchableOpacity
                 style={[
                   styles.pricingCard,
-                  selectedPlan === 'monthly' && styles.pricingCardSelected,
+                  selectedPlan === "monthly" && styles.pricingCardSelected,
                 ]}
                 onPress={() => {
-                  setSelectedPlan('monthly');
+                  setSelectedPlan("monthly");
                   void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 }}
                 activeOpacity={0.8}
               >
                 <View style={styles.pricingCardRow}>
                   <View style={styles.pricingCardLeft}>
-                    <View style={[
-                      styles.radioOuter,
-                      selectedPlan === 'monthly' && styles.radioOuterActive,
-                    ]}>
-                      {selectedPlan === 'monthly' && <View style={styles.radioInner} />}
+                    <View
+                      style={[
+                        styles.radioOuter,
+                        selectedPlan === "monthly" && styles.radioOuterActive,
+                      ]}
+                    >
+                      {selectedPlan === "monthly" && (
+                        <View style={styles.radioInner} />
+                      )}
                     </View>
                     <View>
-                      <Text style={styles.planName}>{t('lifetime')}</Text>
-                      <Text style={styles.planNote}>{t('oneTimePurchase')}</Text>
+                      <Text style={styles.planName}>{t("monthly")}</Text>
+                      <Text style={styles.planNote}>
+                        {t("monthlySubscription")}
+                      </Text>
                     </View>
                   </View>
-                  <Text style={styles.planPrice}>$4.99<Text style={styles.planPriceSub}>{t('perMonth')}</Text></Text>
+                  <Text style={styles.planPrice}>
+                    {monthlyPrice}
+                    <Text style={styles.planPriceSub}>{t("perMonth")}</Text>
+                  </Text>
                 </View>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[
                   styles.pricingCard,
-                  selectedPlan === 'yearly' && styles.pricingCardSelected,
+                  selectedPlan === "yearly" && styles.pricingCardSelected,
                 ]}
                 onPress={() => {
-                  setSelectedPlan('yearly');
+                  setSelectedPlan("yearly");
                   void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 }}
                 activeOpacity={0.8}
               >
-                {selectedPlan === 'yearly' && (
+                {selectedPlan === "yearly" && (
                   <View style={styles.bestValueBadge}>
                     <Zap color="#0a0118" size={12} />
-                    <Text style={styles.bestValueText}>{t('bestValue')}</Text>
+                    <Text style={styles.bestValueText}>{t("bestValue")}</Text>
                   </View>
                 )}
                 <View style={styles.pricingCardRow}>
                   <View style={styles.pricingCardLeft}>
-                    <View style={[
-                      styles.radioOuter,
-                      selectedPlan === 'yearly' && styles.radioOuterActive,
-                    ]}>
-                      {selectedPlan === 'yearly' && <View style={styles.radioInner} />}
+                    <View
+                      style={[
+                        styles.radioOuter,
+                        selectedPlan === "yearly" && styles.radioOuterActive,
+                      ]}
+                    >
+                      {selectedPlan === "yearly" && (
+                        <View style={styles.radioInner} />
+                      )}
                     </View>
                     <View>
-                      <Text style={styles.planName}>{t('yearlyPlan')}</Text>
-                      <Text style={styles.planNote}>{t('yearlyNote')}</Text>
+                      <Text style={styles.planName}>{t("yearlyPlan")}</Text>
+                      <Text style={styles.planNote}>{t("yearlyNote")}</Text>
                     </View>
                   </View>
                   <View style={styles.yearlyPriceContainer}>
                     <Text style={styles.planPriceStrike}>$59.88</Text>
-                    <Text style={styles.planPrice}>$29.99<Text style={styles.planPriceSub}>{t('perYear')}</Text></Text>
+                    <Text style={styles.planPrice}>
+                      {yearlyPrice}
+                      <Text style={styles.planPriceSub}>{t("perYear")}</Text>
+                    </Text>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -232,13 +260,19 @@ export default function PremiumScreen() {
             {isPremium ? (
               <View style={styles.activeBadge}>
                 <Crown color="#fbbf24" size={20} />
-                <Text style={styles.activeBadgeText}>{t('premiumActive')}</Text>
+                <Text style={styles.activeBadgeText}>
+                  {t("premiumActive")}
+                </Text>
               </View>
             ) : (
               <TouchableOpacity
-                style={styles.purchaseButton}
+                style={[
+                  styles.purchaseButton,
+                  (isPurchasing || isLoading) && styles.purchaseButtonDisabled,
+                ]}
                 onPress={handlePurchase}
                 activeOpacity={0.8}
+                disabled={isPurchasing || isLoading}
               >
                 <LinearGradient
                   colors={["#fbbf24", "#f59e0b", "#d97706"]}
@@ -246,8 +280,14 @@ export default function PremiumScreen() {
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                 >
-                  <Crown color="#ffffff" size={22} />
-                  <Text style={styles.purchaseButtonText}>{t('getPremium')}</Text>
+                  {isPurchasing ? (
+                    <ActivityIndicator color="#ffffff" size="small" />
+                  ) : (
+                    <Crown color="#ffffff" size={22} />
+                  )}
+                  <Text style={styles.purchaseButtonText}>
+                    {isPurchasing ? t("processing") : t("getPremium")}
+                  </Text>
                 </LinearGradient>
               </TouchableOpacity>
             )}
@@ -256,11 +296,14 @@ export default function PremiumScreen() {
               style={styles.restoreButton}
               onPress={handleRestore}
               activeOpacity={0.7}
+              disabled={isRestoring}
             >
-              <Text style={styles.restoreButtonText}>{t('restorePurchase')}</Text>
+              <Text style={styles.restoreButtonText}>
+                {isRestoring ? t("restoring") : t("restorePurchase")}
+              </Text>
             </TouchableOpacity>
 
-            <Text style={styles.legalText}>{t('premiumLegal')}</Text>
+            <Text style={styles.legalText}>{t("premiumLegal")}</Text>
           </ScrollView>
         </SafeAreaView>
       </LinearGradient>
@@ -525,6 +568,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: "hidden",
     marginBottom: 16,
+  },
+  purchaseButtonDisabled: {
+    opacity: 0.7,
   },
   purchaseButtonGradient: {
     flexDirection: "row",
