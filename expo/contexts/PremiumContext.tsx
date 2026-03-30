@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Platform } from "react-native";
+import { Platform, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import createContextHook from "@nkzw/create-context-hook";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -17,15 +17,16 @@ const ENTITLEMENT_ID = "premium";
 
 function getRCApiKey(): string {
   if (__DEV__ || Platform.OS === "web") {
+    console.log("[RC] Using TEST API key (dev/web mode)");
     return process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY ?? "";
   }
-  return (
-    Platform.select({
-      ios: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY,
-      android: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY,
-      default: process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY,
-    }) ?? ""
-  );
+  const key = Platform.select({
+    ios: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY,
+    android: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY,
+    default: process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY,
+  }) ?? "";
+  console.log(`[RC] Using ${Platform.OS} API key, length: ${key.length}, prefix: ${key.substring(0, 8)}...`);
+  return key;
 }
 
 let rcConfigured = false;
@@ -33,16 +34,15 @@ const apiKey = getRCApiKey();
 if (apiKey) {
   try {
     Purchases.configure({ apiKey });
-    if (__DEV__) {
-      void Purchases.setLogLevel(LOG_LEVEL.DEBUG);
-    }
+    void Purchases.setLogLevel(LOG_LEVEL.DEBUG);
     rcConfigured = true;
-    console.log("RevenueCat configured with key:", apiKey.substring(0, 10) + "...");
+    console.log("[RC] RevenueCat configured successfully, key prefix:", apiKey.substring(0, 12) + "...");
+    console.log(`[RC] __DEV__: ${__DEV__}, Platform: ${Platform.OS}`);
   } catch (e) {
-    console.error("Failed to configure RevenueCat:", e);
+    console.error("[RC] Failed to configure RevenueCat:", e);
   }
 } else {
-  console.warn("RevenueCat API key not found");
+  console.warn("[RC] API key is EMPTY. iOS key set:", !!process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY, "Android key set:", !!process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY, "Test key set:", !!process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY);
 }
 
 export const [PremiumProvider, usePremium] = createContextHook(() => {
@@ -83,35 +83,52 @@ export const [PremiumProvider, usePremium] = createContextHook(() => {
 
   const purchaseMutation = useMutation({
     mutationFn: async (pkg: PurchasesPackage) => {
-      console.log("Purchasing package:", pkg.identifier);
+      console.log("[RC] Starting purchase for package:", pkg.identifier);
+      console.log("[RC] Product ID:", pkg.product.identifier);
+      console.log("[RC] Product price:", pkg.product.priceString);
       const result = await Purchases.purchasePackage(pkg);
-      console.log("Purchase result:", JSON.stringify(result.customerInfo.entitlements.active));
+      console.log("[RC] Purchase completed. Active entitlements:", JSON.stringify(result.customerInfo.entitlements.active));
       return result;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      const hasEntitlement = typeof data.customerInfo.entitlements.active[ENTITLEMENT_ID] !== "undefined";
+      console.log("[RC] Purchase success. Has premium entitlement:", hasEntitlement);
       void queryClient.invalidateQueries({ queryKey: ["rc_customer_info"] });
     },
     onError: (error: any) => {
       if (error.userCancelled) {
-        console.log("User cancelled purchase");
+        console.log("[RC] User cancelled purchase");
       } else {
-        console.error("Purchase error:", error);
+        console.error("[RC] Purchase error:", error?.message ?? error);
+        console.error("[RC] Purchase error code:", error?.code);
+        Alert.alert(
+          "Purchase Failed",
+          error?.message ?? "Something went wrong. Please try again."
+        );
       }
     },
   });
 
   const restoreMutation = useMutation({
     mutationFn: async () => {
-      console.log("Restoring purchases...");
+      console.log("[RC] Restoring purchases...");
       const info = await Purchases.restorePurchases();
-      console.log("Restore result:", JSON.stringify(info.entitlements.active));
+      console.log("[RC] Restore result:", JSON.stringify(info.entitlements.active));
       return info;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      const hasEntitlement = typeof data.entitlements.active[ENTITLEMENT_ID] !== "undefined";
+      console.log("[RC] Restore success. Has premium entitlement:", hasEntitlement);
       void queryClient.invalidateQueries({ queryKey: ["rc_customer_info"] });
+      if (hasEntitlement) {
+        Alert.alert("Restored", "Your premium subscription has been restored.");
+      } else {
+        Alert.alert("No Purchases Found", "No previous purchases were found for this account.");
+      }
     },
-    onError: (error) => {
-      console.error("Restore error:", error);
+    onError: (error: any) => {
+      console.error("[RC] Restore error:", error?.message ?? error);
+      Alert.alert("Restore Failed", error?.message ?? "Could not restore purchases. Please try again.");
     },
   });
 
