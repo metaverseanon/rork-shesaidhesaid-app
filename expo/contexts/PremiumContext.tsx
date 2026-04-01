@@ -19,10 +19,9 @@ function getRCApiKey(): string {
   const key = Platform.select({
     ios: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY,
     android: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY,
-    web: process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY,
-    default: process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY,
+    default: "",
   }) ?? "";
-  console.log(`[RC] Using ${Platform.OS} API key`);
+  console.log(`[RC] Using ${Platform.OS} API key, prefix: ${key.substring(0, 5)}...`);
   return key;
 }
 
@@ -34,12 +33,12 @@ if (apiKey) {
     void Purchases.setLogLevel(LOG_LEVEL.DEBUG);
     rcConfigured = true;
     console.log("[RC] RevenueCat configured successfully, key prefix:", apiKey.substring(0, 12) + "...");
-    console.log(`[RC] __DEV__: ${__DEV__}, Platform: ${Platform.OS}`);
+    console.log(`[RC] Platform: ${Platform.OS}`);
   } catch (e) {
     console.error("[RC] Failed to configure RevenueCat:", e);
   }
 } else {
-  console.warn("[RC] API key is EMPTY. iOS key set:", !!process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY, "Android key set:", !!process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY, "Test key set:", !!process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY);
+  console.warn("[RC] API key is EMPTY. iOS key set:", !!process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY, "Android key set:", !!process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY);
 }
 
 export const [PremiumProvider, usePremium] = createContextHook(() => {
