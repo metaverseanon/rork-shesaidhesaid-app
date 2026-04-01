@@ -15,13 +15,14 @@ const SCAN_DATE_KEY = "daily_scan_date";
 const FREE_DAILY_LIMIT = 3;
 const ENTITLEMENT_ID = "premium";
 
+
 function getRCApiKey(): string {
   const key = Platform.select({
     ios: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY,
     android: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY,
     default: "",
   }) ?? "";
-  console.log(`[RC] Using ${Platform.OS} API key, prefix: ${key.substring(0, 5)}...`);
+  console.log(`[RC] v1.0.1 Using ${Platform.OS} API key, prefix: ${key.substring(0, 5)}...`);
   return key;
 }
 
