@@ -16,19 +16,12 @@ const FREE_DAILY_LIMIT = 3;
 const ENTITLEMENT_ID = "premium";
 
 function getRCApiKey(): string {
-  if (__DEV__ || Platform.OS === "web") {
-    const testKey = process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY ?? "";
-    if (testKey) {
-      console.log(`[RC] Using TEST key for ${Platform.OS} (dev/web)`);
-      return testKey;
-    }
-  }
   const key = Platform.select({
     ios: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY,
     android: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY,
-    default: process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY,
+    default: "",
   }) ?? "";
-  console.log(`[RC] Using ${Platform.OS} API key, prefix: ${key.substring(0, 5)}...`);
+  console.log(`[RC] Using ${Platform.OS} API key, prefix: ${key.substring(0, 8)}...`);
   return key;
 }
 
