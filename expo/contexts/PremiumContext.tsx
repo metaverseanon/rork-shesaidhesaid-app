@@ -207,8 +207,25 @@ export const [PremiumProvider, usePremium] = createContextHook(() => {
   }, [dailyScans]);
 
   const currentOffering = offeringsQuery.data;
-  const monthlyPackage = currentOffering?.monthly ?? null;
-  const annualPackage = currentOffering?.annual ?? null;
+  const monthlyPackage = useMemo(() => {
+    if (!currentOffering) return null;
+    if (currentOffering.monthly) return currentOffering.monthly;
+    const found = currentOffering.availablePackages.find(
+      (p) => p.identifier === "monthly" || p.identifier === "$rc_monthly" || p.product.identifier === "monthly"
+    );
+    console.log("[RC] Monthly package lookup:", found?.identifier ?? "NOT FOUND");
+    return found ?? null;
+  }, [currentOffering]);
+
+  const annualPackage = useMemo(() => {
+    if (!currentOffering) return null;
+    if (currentOffering.annual) return currentOffering.annual;
+    const found = currentOffering.availablePackages.find(
+      (p) => p.identifier === "yearly" || p.identifier === "$rc_annual" || p.product.identifier === "yearly"
+    );
+    console.log("[RC] Annual package lookup:", found?.identifier ?? "NOT FOUND");
+    return found ?? null;
+  }, [currentOffering]);
 
   const purchasePackage = useCallback(
     (pkg: PurchasesPackage) => {
