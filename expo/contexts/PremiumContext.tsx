@@ -15,14 +15,20 @@ const SCAN_DATE_KEY = "daily_scan_date";
 const FREE_DAILY_LIMIT = 3;
 const ENTITLEMENT_ID = "premium";
 
-
 function getRCApiKey(): string {
+  if (__DEV__ || Platform.OS === "web") {
+    const testKey = process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY ?? "";
+    if (testKey) {
+      console.log(`[RC] Using TEST key for ${Platform.OS} (dev/web)`);
+      return testKey;
+    }
+  }
   const key = Platform.select({
     ios: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY,
     android: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY,
-    default: "",
+    default: process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY,
   }) ?? "";
-  console.log(`[RC] v1.0.1 Using ${Platform.OS} API key, prefix: ${key.substring(0, 5)}...`);
+  console.log(`[RC] Using ${Platform.OS} API key, prefix: ${key.substring(0, 5)}...`);
   return key;
 }
 
@@ -31,15 +37,16 @@ const apiKey = getRCApiKey();
 if (apiKey) {
   try {
     Purchases.configure({ apiKey });
-    void Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+    if (__DEV__) {
+      void Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+    }
     rcConfigured = true;
-    console.log("[RC] RevenueCat configured successfully, key prefix:", apiKey.substring(0, 12) + "...");
-    console.log(`[RC] Platform: ${Platform.OS}`);
+    console.log("[RC] RevenueCat configured. Platform:", Platform.OS, "Key prefix:", apiKey.substring(0, 8) + "...");
   } catch (e) {
     console.error("[RC] Failed to configure RevenueCat:", e);
   }
 } else {
-  console.warn("[RC] API key is EMPTY. iOS key set:", !!process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY, "Android key set:", !!process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY);
+  console.warn("[RC] No API key available for platform:", Platform.OS);
 }
 
 export const [PremiumProvider, usePremium] = createContextHook(() => {
@@ -52,10 +59,10 @@ export const [PremiumProvider, usePremium] = createContextHook(() => {
       if (!rcConfigured) return null;
       try {
         const info = await Purchases.getCustomerInfo();
-        console.log("RC customer info fetched:", JSON.stringify(info.entitlements.active));
+        console.log("[RC] Customer info fetched. Active entitlements:", Object.keys(info.entitlements.active));
         return info;
       } catch (e) {
-        console.error("Failed to get customer info:", e);
+        console.error("[RC] Failed to get customer info:", e);
         return null;
       }
     },
@@ -68,10 +75,11 @@ export const [PremiumProvider, usePremium] = createContextHook(() => {
       if (!rcConfigured) return null;
       try {
         const offerings = await Purchases.getOfferings();
-        console.log("RC offerings fetched:", JSON.stringify(offerings.current?.availablePackages.map(p => p.identifier)));
+        console.log("[RC] Offerings fetched. Current:", offerings.current?.identifier);
+        console.log("[RC] Available packages:", offerings.current?.availablePackages.map(p => `${p.identifier} (${p.product.identifier}: ${p.product.priceString})`));
         return offerings.current ?? null;
       } catch (e) {
-        console.error("Failed to get offerings:", e);
+        console.error("[RC] Failed to get offerings:", e);
         return null;
       }
     },
@@ -80,43 +88,50 @@ export const [PremiumProvider, usePremium] = createContextHook(() => {
 
   const purchaseMutation = useMutation({
     mutationFn: async (pkg: PurchasesPackage) => {
-      console.log("[RC] Starting purchase for package:", pkg.identifier);
-      console.log("[RC] Product ID:", pkg.product.identifier);
-      console.log("[RC] Product price:", pkg.product.priceString);
-      const result = await Purchases.purchasePackage(pkg);
-      console.log("[RC] Purchase completed. Active entitlements:", JSON.stringify(result.customerInfo.entitlements.active));
-      return result;
+      if (!rcConfigured) {
+        throw new Error("Purchases are not available. Please restart the app.");
+      }
+      console.log("[RC] Starting purchase for:", pkg.identifier, "Product:", pkg.product.identifier, "Price:", pkg.product.priceString);
+      const { customerInfo } = await Purchases.purchasePackage(pkg);
+      const hasEntitlement = typeof customerInfo.entitlements.active[ENTITLEMENT_ID] !== "undefined";
+      console.log("[RC] Purchase completed. Has premium:", hasEntitlement);
+      console.log("[RC] Active entitlements:", Object.keys(customerInfo.entitlements.active));
+      if (!hasEntitlement) {
+        throw new Error("Purchase completed but premium was not granted. Please contact support.");
+      }
+      return customerInfo;
     },
-    onSuccess: (data) => {
-      const hasEntitlement = typeof data.customerInfo.entitlements.active[ENTITLEMENT_ID] !== "undefined";
-      console.log("[RC] Purchase success. Has premium entitlement:", hasEntitlement);
-      void queryClient.invalidateQueries({ queryKey: ["rc_customer_info"] });
+    onSuccess: (customerInfo) => {
+      console.log("[RC] Purchase success, updating customer info");
+      queryClient.setQueryData(["rc_customer_info"], customerInfo);
     },
     onError: (error: any) => {
       if (error.userCancelled) {
         console.log("[RC] User cancelled purchase");
-      } else {
-        console.error("[RC] Purchase error:", error?.message ?? error);
-        console.error("[RC] Purchase error code:", error?.code);
-        Alert.alert(
-          "Purchase Failed",
-          error?.message ?? "Something went wrong. Please try again."
-        );
+        return;
       }
+      console.error("[RC] Purchase error:", error?.message ?? error, "Code:", error?.code);
+      Alert.alert(
+        "Purchase Failed",
+        error?.message ?? "Something went wrong. Please try again."
+      );
     },
   });
 
   const restoreMutation = useMutation({
     mutationFn: async () => {
+      if (!rcConfigured) {
+        throw new Error("Purchases are not available. Please restart the app.");
+      }
       console.log("[RC] Restoring purchases...");
       const info = await Purchases.restorePurchases();
-      console.log("[RC] Restore result:", JSON.stringify(info.entitlements.active));
+      console.log("[RC] Restore result. Active entitlements:", Object.keys(info.entitlements.active));
       return info;
     },
     onSuccess: (data) => {
       const hasEntitlement = typeof data.entitlements.active[ENTITLEMENT_ID] !== "undefined";
-      console.log("[RC] Restore success. Has premium entitlement:", hasEntitlement);
-      void queryClient.invalidateQueries({ queryKey: ["rc_customer_info"] });
+      console.log("[RC] Restore success. Has premium:", hasEntitlement);
+      queryClient.setQueryData(["rc_customer_info"], data);
       if (hasEntitlement) {
         Alert.alert("Restored", "Your premium subscription has been restored.");
       } else {
@@ -142,7 +157,7 @@ export const [PremiumProvider, usePremium] = createContextHook(() => {
   useEffect(() => {
     if (!rcConfigured) return;
     const listener = (info: CustomerInfo) => {
-      console.log("RC customer info updated:", JSON.stringify(info.entitlements.active));
+      console.log("[RC] Customer info updated. Active entitlements:", Object.keys(info.entitlements.active));
       queryClient.setQueryData(["rc_customer_info"], info);
     };
     Purchases.addCustomerInfoUpdateListener(listener);
@@ -197,12 +212,25 @@ export const [PremiumProvider, usePremium] = createContextHook(() => {
 
   const purchasePackage = useCallback(
     (pkg: PurchasesPackage) => {
+      if (!rcConfigured) {
+        Alert.alert("Error", "Purchases are not available on this device. Please try on your mobile device.");
+        return;
+      }
+      if (!pkg.product?.identifier) {
+        Alert.alert("Error", "Invalid product. Please try again later.");
+        return;
+      }
+      console.log("[RC] User initiated purchase for:", pkg.product.identifier, "Price:", pkg.product.priceString);
       purchaseMutation.mutate(pkg);
     },
     [purchaseMutation]
   );
 
   const restorePurchases = useCallback(() => {
+    if (!rcConfigured) {
+      Alert.alert("Error", "Purchases are not available on this device.");
+      return;
+    }
     restoreMutation.mutate();
   }, [restoreMutation]);
 
